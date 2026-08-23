@@ -14,7 +14,7 @@ interface AuthContextType {
   isBypass: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<{ error?: string }>;
-  signUpWithEmail: (email: string, password: string) => Promise<{ error?: string; message?: string }>;
+  signUpWithEmail: (email: string, password: string, name?: string) => Promise<{ error?: string; message?: string }>;
   bypassLogin: () => void;
   signOut: () => Promise<void>;
 }
@@ -138,16 +138,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return {};
   }
 
-  async function signUpWithEmail(email: string, password: string) {
+  async function signUpWithEmail(email: string, password: string, name?: string) {
     const sb = getSupabase();
     if (!sb) return { error: "Supabase not configured" };
 
-    const { error } = await sb.auth.signUp({ email, password });
+    const { error } = await sb.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: name || "Student" },
+      },
+    });
 
     if (error) {
       return { error: error.message };
     }
-    return { message: "Check your email for a verification link!" };
+    return { message: "Account created! Check your email for verification." };
   }
 
   function bypassLogin() {

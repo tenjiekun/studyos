@@ -5,12 +5,12 @@ import { useStudyData } from "@/lib/use-study-data";
 import { useAuth } from "@/components/auth-provider";
 import { useTheme } from "@/components/theme-provider";
 import { formatMinutes } from "@/lib/helpers";
-import { Moon, Sun, Monitor, Target, Zap, LogOut, User } from "lucide-react";
+import { Moon, Sun, Monitor, Target, Zap, LogOut, Camera, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
   const { settings, updateSettings, loading } = useStudyData();
@@ -24,11 +24,16 @@ export default function SettingsPage() {
   const [sessionsBeforeLong, setSessionsBeforeLong] = useState(settings.pomodoro.sessions_before_long_break);
   const [dailyGoal, setDailyGoal] = useState(settings.daily_goal_minutes);
 
+  // Profile state
+  const [profileName, setProfileName] = useState("");
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Sync local state when settings load from DB
   useEffect(() => {
     if (!loading) {
       setFocusDur(settings.pomodoro.focus_duration);
@@ -38,6 +43,27 @@ export default function SettingsPage() {
       setDailyGoal(settings.daily_goal_minutes);
     }
   }, [loading, settings]);
+
+  // Load profile from Supabase
+  useEffect(() => {
+    if (!user || isBypass) {
+      setProfileName(user?.user_metadata?.full_name || "Local User");
+      return;
+    }
+    async function loadProfile() {
+      const { getSupabase } = await import("@/lib/supabase/client");
+      const sb = getSupabase();
+      if (!sb) return;
+      const { data } = await sb.from("profiles").select("name, avatar_url").eq("id", user!.id).maybeSingle();
+      if (data) {
+        setProfileName(data.name || "Student");
+        setAvatarPreview(data.avatar_url);
+      } else {
+        setProfileName(user!.user_metadata?.full_name || "Student");
+      }
+    }
+    loadProfile();
+  }, [user, isBypass]);
 
   if (!mounted) {
     return (
@@ -49,6 +75,57 @@ export default function SettingsPage() {
     );
   }
 
+  async function handleAvatarSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image must be under 2MB");
+      return;
+    }
+    setAvatarFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setAvatarPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  async function saveProfile() {
+    if (!profileName.trim()) return;
+    setSavingProfile(true);
+
+    let avatarUrl = avatarPreview;
+
+    if (avatarFile && !isBypass) {
+      const { getSupabase } = await import("@/lib/supabase/client");
+      const sb = getSupabase();
+      if (sb && user) {
+        const path = `${user.id}/${Date.now()}-${avatarFile.name}`;
+        const { error } = await sb.storage.from("avatars").upload(path, avatarFile, {
+          contentType: avatarFile.type,
+        });
+        if (!error) {
+          const { data } = sb.storage.from("avatars").getPublicUrl(path);
+          avatarUrl = data.publicUrl;
+        }
+      }
+    }
+
+    if (!isBypass) {
+      const { getSupabase } = await import("@/lib/supabase/client");
+      const sb = getSupabase();
+      if (sb && user) {
+        await sb.from("profiles").upsert({
+          id: user.id,
+          name: profileName.trim(),
+          avatar_url: avatarUrl,
+        }, { onConflict: "id" });
+      }
+    }
+
+    toast.success("Profile updated!");
+    setSavingProfile(false);
+    setAvatarFile(null);
+  }
+
   async function savePomodoro() {
     await updateSettings({
       pomodoro: {
@@ -58,10 +135,12 @@ export default function SettingsPage() {
         sessions_before_long_break: sessionsBeforeLong,
       },
     });
+    toast.success("Pomodoro settings saved!");
   }
 
   async function saveGoal() {
     await updateSettings({ daily_goal_minutes: dailyGoal });
+    toast.success("Goal saved!");
   }
 
   const themes: { value: "light" | "dark" | "system"; label: string; icon: typeof Sun }[] = [
@@ -77,8 +156,55 @@ export default function SettingsPage() {
         <p className="text-sm text-muted-foreground mt-0.5">Customize your study experience</p>
       </div>
 
-      {/* Sign out — always visible at top */}
-      <Card className="animate-fade-in border-destructive/20">
+      {/* Profile Card */}
+      <Card className="animate-fade-in">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">👤</span>
+            <CardTitle className="text-sm font-medium">Profile</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                {avatarPreview ? (
+                  <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-3xl">{profileName?.[0]?.toUpperCase() || "?"}</span>
+                )}
+              </div>
+              <label
+                htmlFor="avatar-upload"
+                className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-colors"
+              >
+                <Camera className="w-3.5 h-3.5" />
+              </label>
+              <input id="avatar-upload" type="file" accept="image/*" onChange={handleAvatarSelect} className="hidden" />
+            </div>
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="profile-name" className="text-xs">Display Name</Label>
+              <Input
+                id="profile-name"
+                value={profileName}
+                onChange={(e) => setProfileName(e.target.value)}
+                placeholder="Your name"
+                maxLength={30}
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-muted-foreground flex-1">{user?.email || "Local mode"}</p>
+            <Button onClick={saveProfile} size="sm" disabled={savingProfile || !profileName.trim()}>
+              {savingProfile ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
+              Save Profile
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Sign out */}
+      <Card className="animate-fade-in">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -86,36 +212,6 @@ export default function SettingsPage() {
               <p className="text-xs text-muted-foreground">{isBypass ? "Bypass mode" : "Signed in"}</p>
             </div>
             <Button variant="destructive" size="sm" className="gap-1.5" onClick={signOut}>
-              <LogOut className="w-3.5 h-3.5" />
-              Sign out
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Account */}
-      <Card className="animate-fade-in">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <User className="w-4 h-4 text-primary" />
-            <CardTitle className="text-sm font-medium">Account</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={user?.user_metadata?.avatar_url} />
-                <AvatarFallback>
-                  {user?.user_metadata?.full_name?.charAt(0) || user?.email?.charAt(0) || "U"}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-sm font-medium">{user?.user_metadata?.full_name || "Local User"}</p>
-                <p className="text-xs text-muted-foreground">{user?.email || "Bypass mode"}</p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={signOut}>
               <LogOut className="w-3.5 h-3.5" />
               Sign out
             </Button>
@@ -160,26 +256,23 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-xs">Focus Duration (minutes)</Label>
+              <Label className="text-xs">Focus (min)</Label>
               <Input type="number" min={5} max={120} value={focusDur} onChange={(e) => setFocusDur(Number(e.target.value))} />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs">Short Break (minutes)</Label>
+              <Label className="text-xs">Short Break (min)</Label>
               <Input type="number" min={1} max={30} value={shortBreak} onChange={(e) => setShortBreak(Number(e.target.value))} />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs">Long Break (minutes)</Label>
+              <Label className="text-xs">Long Break (min)</Label>
               <Input type="number" min={5} max={60} value={longBreak} onChange={(e) => setLongBreak(Number(e.target.value))} />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs">Sessions Before Long Break</Label>
+              <Label className="text-xs">Sessions Before Long</Label>
               <Input type="number" min={2} max={8} value={sessionsBeforeLong} onChange={(e) => setSessionsBeforeLong(Number(e.target.value))} />
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Cycle: {focusDur}min focus → {shortBreak}min break → long break every {sessionsBeforeLong} sessions ({longBreak}min)
-          </p>
-          <Button onClick={savePomodoro} size="sm">Save Pomodoro Settings</Button>
+          <Button onClick={savePomodoro} size="sm">Save Pomodoro</Button>
         </CardContent>
       </Card>
 
@@ -208,7 +301,6 @@ export default function SettingsPage() {
           <div className="text-center space-y-2">
             <p className="text-sm font-medium">StudyOS</p>
             <p className="text-xs text-muted-foreground">Your personal study command center</p>
-            <p className="text-[10px] text-muted-foreground">Built with Next.js, TypeScript & Tailwind CSS</p>
           </div>
         </CardContent>
       </Card>
