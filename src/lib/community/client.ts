@@ -326,12 +326,20 @@ export async function uploadVoiceNote(
     contentType: blob.type,
   });
 
-  if (error) return null;
+  if (error) {
+    console.error("Voice upload error:", error.message);
+    return null;
+  }
 
-  const { data: urlData } = sb.storage
+  // Try public URL first
+  const { data: urlData } = sb.storage.from("voice-notes").getPublicUrl(path);
+  if (urlData.publicUrl) return urlData.publicUrl;
+
+  // Fall back to signed URL for private buckets
+  const { data: signedData } = await sb.storage
     .from("voice-notes")
-    .getPublicUrl(path);
-  return urlData.publicUrl;
+    .createSignedUrl(path, 3600);
+  return signedData?.signedUrl || null;
 }
 
 // ===== Local Storage (Bypass Mode) =====
