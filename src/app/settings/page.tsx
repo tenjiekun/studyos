@@ -39,14 +39,11 @@ export default function SettingsPage() {
     }
   }, [loading, settings]);
 
-  if (!mounted || loading) {
+  if (!mounted) {
     return (
       <div className="p-4 md:p-8 max-w-[700px] mx-auto">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-24 bg-muted rounded" />
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-40 bg-muted rounded-xl" />
-          ))}
         </div>
       </div>
     );
@@ -81,36 +78,34 @@ export default function SettingsPage() {
       </div>
 
       {/* Account */}
-      {user && (
-        <Card className="animate-fade-in">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <User className="w-4 h-4 text-primary" />
-              <CardTitle className="text-sm font-medium">Account</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={user.user_metadata?.avatar_url} />
-                  <AvatarFallback>
-                    {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0) || "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-sm font-medium">{user.user_metadata?.full_name || "User"}</p>
-                  <p className="text-xs text-muted-foreground">{user.email}</p>
-                </div>
+      <Card className="animate-fade-in">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <User className="w-4 h-4 text-primary" />
+            <CardTitle className="text-sm font-medium">Account</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={user?.user_metadata?.avatar_url} />
+                <AvatarFallback>
+                  {user?.user_metadata?.full_name?.charAt(0) || user?.email?.charAt(0) || "U"}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-sm font-medium">{user?.user_metadata?.full_name || "Local User"}</p>
+                <p className="text-xs text-muted-foreground">{user?.email || "Bypass mode"}</p>
               </div>
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={signOut}>
-                <LogOut className="w-3.5 h-3.5" />
-                Sign out
-              </Button>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={signOut}>
+              <LogOut className="w-3.5 h-3.5" />
+              Sign out
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Appearance */}
       <Card className="animate-fade-in">
