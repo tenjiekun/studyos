@@ -98,6 +98,18 @@ export async function createGroup(
   const sb = getSupabase();
   if (!sb) return null;
 
+  // Auto-create profile if missing
+  const { data: existingProfile } = await sb
+    .from("profiles")
+    .select("id")
+    .eq("id", userId)
+    .single();
+
+  if (!existingProfile) {
+    await sb.from("profiles").insert({ id: userId, name: "Student" });
+    await sb.from("user_settings").insert({ user_id: userId });
+  }
+
   const { data, error } = await sb
     .from("groups")
     .insert({ ...group, created_by: userId })

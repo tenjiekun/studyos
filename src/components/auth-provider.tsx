@@ -82,9 +82,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes (fires after OAuth redirect too)
     const {
       data: { subscription },
-    } = sb.auth.onAuthStateChange((_event, session) => {
+    } = sb.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+
+      // Auto-create profile + settings if missing
+      if (session?.user) {
+        const { data: profile } = await sb
+          .from("profiles")
+          .select("id")
+          .eq("id", session.user.id)
+          .single();
+
+        if (!profile) {
+          await sb.from("profiles").insert({
+            id: session.user.id,
+            name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || "Student",
+          });
+          await sb.from("user_settings").insert({ user_id: session.user.id });
+        }
+      }
+
       setLoading(false);
     });
 
