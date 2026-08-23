@@ -33,10 +33,12 @@ export default function CommunityPage() {
     if (!user) { setLoading(false); return; }
     setLoading(true);
     try {
+      console.log("Loading groups - bypass:", isBypass, "user:", user.id);
       if (isBypass) {
         setGroups(localFetchMyGroups(user.id));
       } else {
         const data = await fetchMyGroups(user.id);
+        console.log("Groups loaded:", data.length);
         setGroups(data);
       }
     } catch (err) {

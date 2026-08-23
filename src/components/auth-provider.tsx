@@ -59,6 +59,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check for bypass mode first
     const bypassActive = localStorage.getItem(BYPASS_KEY) === "true";
     if (bypassActive) {
+      // If Supabase is configured, check if user has a real session first
+      const sb = getSupabase();
+      if (sb) {
+        sb.auth.getSession().then(({ data: { session } }) => {
+          if (session?.user) {
+            // User has a real session — ignore bypass
+            localStorage.removeItem(BYPASS_KEY);
+            setUser(session.user);
+            setSession(session);
+            setIsBypass(false);
+          } else {
+            setUser(createBypassUser());
+            setIsBypass(true);
+          }
+          setLoading(false);
+        });
+        return;
+      }
       setUser(createBypassUser());
       setIsBypass(true);
       setLoading(false);
