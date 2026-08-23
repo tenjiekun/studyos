@@ -11,9 +11,13 @@ import {
   Smile,
   Image as ImageIcon,
   Mic,
-  MoreVertical,
+  Phone,
+  Video,
   Trash2,
 } from "lucide-react";
+import { useWebRTC } from "@/hooks/use-webrtc";
+import { CallOverlay } from "@/components/call-overlay";
+import { IncomingCall } from "@/components/incoming-call";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Profile, DMMessage } from "@/lib/types";
@@ -35,6 +39,11 @@ export default function DMChatPage() {
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const webrtc = useWebRTC({
+    conversationId,
+    currentUserId: user?.id || "",
+  });
 
   // Load messages and other user
   const loadConversation = useCallback(async () => {
@@ -233,6 +242,30 @@ export default function DMChatPage() {
             </p>
           )}
         </div>
+
+        {/* Call buttons */}
+        {!loading && otherUser && webrtc.callState === "idle" && (
+          <div className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="w-9 h-9 p-0"
+              onClick={() => webrtc.startCall("audio")}
+              title="Voice Call"
+            >
+              <Phone className="w-4 h-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="w-9 h-9 p-0"
+              onClick={() => webrtc.startCall("video")}
+              title="Video Call"
+            >
+              <Video className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Messages */}
@@ -349,6 +382,37 @@ export default function DMChatPage() {
           </Button>
         </div>
       </div>
+      {/* Incoming Call */}
+      {webrtc.callState === "incoming" && (
+        <IncomingCall
+          callerName={webrtc.callerName}
+          callType={webrtc.callType}
+          onAccept={webrtc.acceptCall}
+          onReject={webrtc.rejectCall}
+        />
+      )}
+
+      {/* Active Call Overlay */}
+      {(webrtc.callState === "connected" || webrtc.callState === "outgoing") && (
+        <CallOverlay
+          callType={webrtc.callType}
+          localStream={webrtc.localStream}
+          remoteStream={webrtc.remoteStream}
+          otherUserName={otherUser?.name || "Unknown"}
+          isMuted={webrtc.isMuted}
+          isCameraOff={webrtc.isCameraOff}
+          onToggleMute={webrtc.toggleMute}
+          onToggleCamera={webrtc.toggleCamera}
+          onEndCall={webrtc.endCall}
+        />
+      )}
+
+      {/* Call Error */}
+      {webrtc.error && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-destructive text-white px-4 py-2 rounded-lg text-sm shadow-lg">
+          {webrtc.error}
+        </div>
+      )}
     </div>
   );
 }

@@ -40,8 +40,8 @@ export default function CreateGroupPage() {
   function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      setError("Image must be under 2MB");
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Image must be under 10MB");
       return;
     }
     setImageFile(file);
@@ -162,7 +162,7 @@ export default function CreateGroupPage() {
               Choose group image
             </Label>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Optional, max 2MB
+              Optional, max 10MB
             </p>
             <input
               id="group-image"
