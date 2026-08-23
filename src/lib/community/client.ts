@@ -300,8 +300,15 @@ export async function uploadImage(
 
   if (error) return null;
 
+  // Try public URL first, fall back to signed URL
   const { data: urlData } = sb.storage.from(bucket).getPublicUrl(filePath);
-  return urlData.publicUrl;
+  if (urlData.publicUrl) return urlData.publicUrl;
+
+  // For private buckets, create a signed URL (valid for 1 hour)
+  const { data: signedData } = await sb.storage
+    .from(bucket)
+    .createSignedUrl(filePath, 3600);
+  return signedData?.signedUrl || null;
 }
 
 export async function uploadVoiceNote(
