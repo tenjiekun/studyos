@@ -316,10 +316,12 @@ create policy "Authenticated users can upload voice notes"
   on storage.objects for insert
   with check (bucket_id = 'voice-notes' and auth.role() = 'authenticated');
 
--- Auto-create settings on signup
+-- Auto-create profile + settings on signup
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
+  insert into public.profiles (id, name)
+  values (new.id, coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', 'Student'));
   insert into public.user_settings (user_id)
   values (new.id);
   return new;
