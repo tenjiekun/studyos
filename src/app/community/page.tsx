@@ -40,6 +40,13 @@ export default function CommunityPage() {
         const data = await fetchMyGroups(user.id);
         console.log("Groups loaded:", data.length);
         setGroups(data);
+        if (data.length === 0) {
+          // Try to ensure profile exists
+          const sb = (await import("@/lib/supabase/client")).getSupabase();
+          if (sb) {
+            await sb.from("profiles").upsert({ id: user.id, name: user.email?.split("@")[0] || "Student" }, { onConflict: "id" });
+          }
+        }
       }
     } catch (err) {
       console.error("Failed to load groups:", err);

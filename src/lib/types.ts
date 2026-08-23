@@ -64,6 +64,7 @@ export interface Profile {
   id: string;
   name: string;
   avatar_url: string | null;
+  username: string | null;
   created_at: string;
 }
 
@@ -112,6 +113,24 @@ export interface MessageRead {
   message_id: string;
   user_id: string;
   read_at: string;
+}
+
+export interface Conversation {
+  id: string;
+  user1_id: string;
+  user2_id: string;
+  created_at: string;
+}
+
+export interface DMMessage {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  message_type: "text" | "image" | "audio";
+  text: string | null;
+  media_url: string | null;
+  created_at: string;
+  profiles?: Profile;
 }
 
 export const GROUP_CATEGORIES = [

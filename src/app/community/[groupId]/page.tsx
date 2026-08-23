@@ -69,7 +69,7 @@ export default function GroupDiscussionPage() {
 
   // Group info panel
   const [showGroupInfo, setShowGroupInfo] = useState(false);
-  const [groupMembers, setGroupMembers] = useState<{ user_id: string; role: string; profiles?: Profile }[]>([]);
+  const [groupMembers, setGroupMembers] = useState<{ id: string; user_id: string; role: string; profiles?: Profile }[]>([]);
 
   // Load members when group info is opened
   useEffect(() => {
@@ -79,7 +79,7 @@ export default function GroupDiscussionPage() {
       if (!sb) return;
       const { data: members } = await sb
         .from("group_members")
-        .select("user_id, role")
+        .select("id, user_id, role")
         .eq("group_id", groupId);
       if (!members) return;
 
@@ -176,6 +176,7 @@ export default function GroupDiscussionPage() {
       id: user.id,
       name: user.user_metadata?.name || "Local User",
       avatar_url: null,
+      username: null,
       created_at: new Date().toISOString(),
     });
     setIsMember(true);
@@ -522,9 +523,62 @@ export default function GroupDiscussionPage() {
                         Admin
                       </Badge>
                     )}
+                    {group?.created_by === user?.id && member.user_id !== user?.id && (
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Remove ${member.profiles?.name || "this member"}?`)) return;
+                          const sb = getSupabase();
+                          if (!sb) return;
+                          await sb.from("group_members").delete().eq("id", member.id);
+                          setGroupMembers((prev) => prev.filter((m) => m.id !== member.id));
+                        }}
+                        className="text-[10px] text-red-500 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Admin Controls */}
+          {group?.created_by === user?.id && (
+            <div className="mt-4 pt-4 border-t border-border space-y-2">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Admin Controls</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-1.5 text-xs"
+                onClick={async () => {
+                  const sb = getSupabase();
+                  if (!sb) return;
+                  const newName = prompt("Edit group name:", group?.name);
+                  if (newName && newName.trim()) {
+                    await sb.from("groups").update({ name: newName.trim() }).eq("id", group!.id);
+                    setGroup({ ...group!, name: newName.trim() });
+                  }
+                }}
+              >
+                Edit Group Name
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="w-full gap-1.5 text-xs"
+                onClick={async () => {
+                  if (!confirm("Delete this group? This cannot be undone.")) return;
+                  const sb = getSupabase();
+                  if (!sb) return;
+                  await sb.from("messages").delete().eq("group_id", group!.id);
+                  await sb.from("group_members").delete().eq("group_id", group!.id);
+                  await sb.from("groups").delete().eq("id", group!.id);
+                  router.push("/community");
+                }}
+              >
+                Delete Group
+              </Button>
             </div>
           )}
         </div>

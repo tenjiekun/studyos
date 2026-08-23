@@ -13,13 +13,27 @@ export async function fetchMyGroups(userId: string): Promise<GroupWithMembers[]>
   const sb = getSupabase();
   if (!sb) return [];
 
+  // Ensure profile exists first
+  try {
+    await sb.from("profiles").upsert(
+      { id: userId, name: "Student" },
+      { onConflict: "id" }
+    );
+  } catch {}
+
   // Get groups the user is a member of
   const { data: memberships, error: memberError } = await sb
     .from("group_members")
     .select("group_id, role")
     .eq("user_id", userId);
 
-  if (memberError || !memberships?.length) return [];
+  console.log("fetchMyGroups memberships:", memberships, "error:", memberError);
+
+  if (memberError) {
+    console.error("Membership fetch error:", memberError.message);
+    return [];
+  }
+  if (!memberships?.length) return [];
 
   const groupIds = memberships.map((m) => m.group_id);
 
@@ -69,6 +83,8 @@ export async function fetchMyGroups(userId: string): Promise<GroupWithMembers[]>
 export async function fetchDiscoverGroups(): Promise<GroupWithMembers[]> {
   const sb = getSupabase();
   if (!sb) return [];
+
+  console.log("Fetching discover groups...");
 
   const { data: groups } = await sb
     .from("groups")

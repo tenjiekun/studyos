@@ -35,6 +35,7 @@ export default function ProfilePage() {
           id: user!.id,
           name: user!.user_metadata?.name || "Local User",
           avatar_url: null,
+          username: null,
           created_at: new Date().toISOString(),
         });
         setName(user!.user_metadata?.name || "Local User");

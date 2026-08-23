@@ -125,18 +125,21 @@ export interface Database {
           id: string;
           name: string;
           avatar_url: string | null;
+          username: string | null;
           created_at: string;
         };
         Insert: {
           id: string;
           name?: string;
           avatar_url?: string | null;
+          username?: string | null;
           created_at?: string;
         };
         Update: {
           id?: string;
           name?: string;
           avatar_url?: string | null;
+          username?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -229,6 +232,78 @@ export interface Database {
         Relationships: [];
       };
       message_reads: {
+        Row: {
+          id: string;
+          message_id: string;
+          user_id: string;
+          read_at: string;
+        };
+        Insert: {
+          id?: string;
+          message_id: string;
+          user_id: string;
+          read_at?: string;
+        };
+        Update: {
+          id?: string;
+          message_id?: string;
+          user_id?: string;
+          read_at?: string;
+        };
+        Relationships: [];
+      };
+      conversations: {
+        Row: {
+          id: string;
+          user1_id: string;
+          user2_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user1_id: string;
+          user2_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user1_id?: string;
+          user2_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      dm_messages: {
+        Row: {
+          id: string;
+          conversation_id: string;
+          sender_id: string;
+          message_type: "text" | "image" | "audio";
+          text: string | null;
+          media_url: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          conversation_id: string;
+          sender_id: string;
+          message_type?: "text" | "image" | "audio";
+          text?: string | null;
+          media_url?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          conversation_id?: string;
+          sender_id?: string;
+          message_type?: "text" | "image" | "audio";
+          text?: string | null;
+          media_url?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      dm_message_reads: {
         Row: {
           id: string;
           message_id: string;
