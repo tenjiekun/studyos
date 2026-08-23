@@ -15,7 +15,6 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<{ error?: string }>;
   signUpWithEmail: (email: string, password: string, name?: string) => Promise<{ error?: string; message?: string }>;
-  bypassLogin: () => void;
   signOut: () => Promise<void>;
 }
 
@@ -28,24 +27,11 @@ const AuthContext = createContext<AuthContextType>({
   signInWithGoogle: async () => {},
   signInWithEmail: async () => ({}),
   signUpWithEmail: async () => ({}),
-  bypassLogin: () => {},
   signOut: async () => {},
 });
 
 export function useAuth() {
   return useContext(AuthContext);
-}
-
-/** Create a fake User-like object for bypass mode */
-function createBypassUser(): User {
-  return {
-    id: "bypass-user",
-    app_metadata: {},
-    user_metadata: { name: "Local User" },
-    aud: "authenticated",
-    email: "local@bypass.dev",
-    created_at: new Date().toISOString(),
-  } as User;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -56,32 +42,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isBypass, setIsBypass] = useState(false);
 
   useEffect(() => {
-    // Check for bypass mode first
-    const bypassActive = localStorage.getItem(BYPASS_KEY) === "true";
-    if (bypassActive) {
-      // If Supabase is configured, check if user has a real session first
-      const sb = getSupabase();
-      if (sb) {
-        sb.auth.getSession().then(({ data: { session } }) => {
-          if (session?.user) {
-            // User has a real session — ignore bypass
-            localStorage.removeItem(BYPASS_KEY);
-            setUser(session.user);
-            setSession(session);
-            setIsBypass(false);
-          } else {
-            setUser(createBypassUser());
-            setIsBypass(true);
-          }
-          setLoading(false);
-        });
-        return;
-      }
-      setUser(createBypassUser());
-      setIsBypass(true);
-      setLoading(false);
-      return;
-    }
+    // Clear any old bypass mode — force real login
+    localStorage.removeItem(BYPASS_KEY);
 
     const sb = getSupabase();
     if (!sb) {
@@ -174,12 +136,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { message: "Account created! Check your email for verification." };
   }
 
-  function bypassLogin() {
-    localStorage.setItem(BYPASS_KEY, "true");
-    setUser(createBypassUser());
-    setIsBypass(true);
-  }
-
   async function signOut() {
     try {
       localStorage.removeItem(BYPASS_KEY);
@@ -210,7 +166,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithGoogle,
         signInWithEmail,
         signUpWithEmail,
-        bypassLogin,
         signOut,
       }}
     >

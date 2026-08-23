@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 
 function LoginPageInner() {
-  const { user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, bypassLogin, isConfigured } = useAuth();
+  const { user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, isConfigured } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
@@ -95,11 +95,6 @@ function LoginPageInner() {
       }
     }
     setFormLoading(false);
-  }
-
-  function handleBypass() {
-    bypassLogin();
-    router.push("/");
   }
 
   const displayError = authError || (error === "auth_failed" ? "Authentication failed. Please try again." : error ? "Something went wrong. Please try again." : null);
@@ -263,14 +258,7 @@ function LoginPageInner() {
             </>
           )}
 
-          {/* Bypass Button */}
-          <Button
-            variant="ghost"
-            className="w-full h-10 gap-2 text-xs text-muted-foreground"
-            onClick={handleBypass}
-          >
-            Skip login — use local mode
-          </Button>
+
         </div>
 
         <p className="text-center text-[10px] text-muted-foreground">
