@@ -157,18 +157,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
-    if (isBypass) {
+    try {
       localStorage.removeItem(BYPASS_KEY);
+      try {
+        const sb = getSupabase();
+        if (sb) await sb.auth.signOut();
+      } catch (e) { /* ignore */ }
+      localStorage.removeItem("study-os-data");
+      localStorage.removeItem("study-os-community");
+      localStorage.removeItem("study-os-timer");
       setUser(null);
       setSession(null);
       setIsBypass(false);
-      return;
+      window.location.href = "/login";
+    } catch (err) {
+      window.location.href = "/login";
     }
-    const sb = getSupabase();
-    if (!sb) return;
-    await sb.auth.signOut();
-    setUser(null);
-    setSession(null);
   }
 
   return (
