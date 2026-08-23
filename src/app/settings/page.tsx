@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function SettingsPage() {
   const { settings, updateSettings, loading } = useStudyData();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isBypass } = useAuth();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -76,6 +76,22 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="text-sm text-muted-foreground mt-0.5">Customize your study experience</p>
       </div>
+
+      {/* Sign out — always visible at top */}
+      <Card className="animate-fade-in border-destructive/20">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">{user?.email || "Local User"}</p>
+              <p className="text-xs text-muted-foreground">{isBypass ? "Bypass mode" : "Signed in"}</p>
+            </div>
+            <Button variant="destructive" size="sm" className="gap-1.5" onClick={signOut}>
+              <LogOut className="w-3.5 h-3.5" />
+              Sign out
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Account */}
       <Card className="animate-fade-in">
