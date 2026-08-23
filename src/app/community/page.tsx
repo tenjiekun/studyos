@@ -30,15 +30,21 @@ export default function CommunityPage() {
   const [search, setSearch] = useState("");
 
   const loadGroups = useCallback(async () => {
-    if (!user) return;
+    if (!user) { setLoading(false); return; }
     setLoading(true);
-    if (isBypass) {
-      setGroups(localFetchMyGroups(user.id));
-    } else {
-      const data = await fetchMyGroups(user.id);
-      setGroups(data);
+    try {
+      if (isBypass) {
+        setGroups(localFetchMyGroups(user.id));
+      } else {
+        const data = await fetchMyGroups(user.id);
+        setGroups(data);
+      }
+    } catch (err) {
+      console.error("Failed to load groups:", err);
+      setGroups([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [user, isBypass]);
 
   useEffect(() => {
