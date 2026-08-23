@@ -1,5 +1,6 @@
 import { getSupabase } from "@/lib/supabase/client";
 import { Conversation, DMMessage, Profile } from "@/lib/types";
+import { showBrowserNotification } from "@/lib/community/notifications";
 
 // Get or create a conversation between two users
 export async function getOrCreateConversation(
@@ -142,6 +143,30 @@ export async function sendDMMessage(
     .select("id, name, avatar_url, username")
     .eq("id", senderId)
     .single();
+
+  // Create notification for the other user
+  try {
+    const { data: convo } = await sb
+      .from("conversations")
+      .select("user1_id, user2_id")
+      .eq("id", conversationId)
+      .single();
+
+    if (convo) {
+      const recipientId = convo.user1_id === senderId ? convo.user2_id : convo.user1_id;
+      const senderName = (profile as Profile)?.name || "Someone";
+      const preview = text?.substring(0, 80) || "📎 Sent a file";
+
+      await sb.from("notifications").insert({
+        user_id: recipientId,
+        type: "message",
+        title: `DM from ${senderName}`,
+        body: preview,
+        sender_id: senderId,
+        read: false,
+      });
+    }
+  } catch {}
 
   return {
     ...data,

@@ -10,6 +10,7 @@ import {
   Search,
   MessageCircle,
   User,
+  Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -106,6 +107,14 @@ export default function CommunityPage() {
             Discover
           </Badge>
         </Link>
+        {!isBypass && (
+          <Link href="/community/dm">
+            <Badge variant="secondary" className="cursor-pointer px-3 py-1.5 hover:bg-muted">
+              <Mail className="w-3 h-3 mr-1" />
+              DMs
+            </Badge>
+          </Link>
+        )}
       </div>
 
       {/* Search */}
