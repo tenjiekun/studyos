@@ -11,8 +11,10 @@ import {
   Flame,
   Users,
 } from "lucide-react";
+import { NotificationBell } from "@/components/notification-bell";
 import { cn } from "@/lib/utils";
 import { ConnectionIndicator } from "@/components/connection-indicator";
+import { useNotifications } from "@/hooks/use-notifications";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -22,6 +24,16 @@ const navItems = [
   { href: "/community", label: "Community", icon: Users },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
+
+function NotificationBellMobile() {
+  const { unreadCount } = useNotifications();
+  if (unreadCount === 0) return null;
+  return (
+    <span className="absolute -top-1 -right-1.5 w-3.5 h-3.5 rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center">
+      {unreadCount > 9 ? "9+" : unreadCount}
+    </span>
+  );
+}
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -61,6 +73,10 @@ export function Sidebar() {
           })}
         </nav>
 
+        <div className="px-3 py-2">
+          <NotificationBell />
+        </div>
+
         <div className="px-5 py-4 space-y-3">
           <ConnectionIndicator />
           <div className="rounded-lg bg-primary/10 p-3">
@@ -89,7 +105,10 @@ export function Sidebar() {
                     : "text-muted-foreground"
                 )}
               >
-                <item.icon className="w-5 h-5" />
+                <div className="relative">
+                  <item.icon className="w-5 h-5" />
+                  {item.href === "/community" && <NotificationBellMobile />}
+                </div>
                 <span className="text-[10px] font-medium">{item.label}</span>
               </Link>
             );

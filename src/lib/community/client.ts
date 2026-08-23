@@ -6,6 +6,7 @@ import {
   Group,
   GroupMember,
 } from "@/lib/types";
+import { notifyGroupMessage } from "@/lib/community/notifications";
 
 // ===== Groups =====
 
@@ -261,12 +262,30 @@ export async function sendMessage(
 
   if (error || !data) return null;
 
-  // Fetch profile
+  // Fetch profile for the response
   const { data: profile } = await sb
     .from("profiles")
     .select("id, name, avatar_url")
     .eq("id", userId)
     .single();
+
+  // Get group name and sender name for notification
+  const { data: group } = await sb
+    .from("groups")
+    .select("name")
+    .eq("id", groupId)
+    .single();
+  const senderName = (profile as Profile)?.name || "Someone";
+  const groupName = group?.name || "Group";
+
+  // Create notifications for other members (fire and forget)
+  notifyGroupMessage(
+    groupId,
+    userId,
+    senderName,
+    groupName,
+    text || ""
+  ).catch(() => {});
 
   return {
     ...data,

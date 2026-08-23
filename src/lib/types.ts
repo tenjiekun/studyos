@@ -133,6 +133,18 @@ export interface DMMessage {
   profiles?: Profile;
 }
 
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: "message" | "group_join" | "group_invite" | "system";
+  title: string;
+  body: string;
+  group_id?: string;
+  sender_id?: string;
+  read: boolean;
+  created_at: string;
+}
+
 export const GROUP_CATEGORIES = [
   "General",
   "Mathematics",
