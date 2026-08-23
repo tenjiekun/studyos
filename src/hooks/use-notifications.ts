@@ -59,8 +59,13 @@ export function useNotifications() {
     const sb = getSupabase();
     if (!sb) return;
 
+    let cancelled = false;
+    // Unique name per mount avoids collision in React Strict Mode
+    const mountId = Math.random().toString(36).slice(2, 9);
+    const channelName = `notifications-${user.id}-${mountId}`;
+
     const channel = sb
-      .channel(`notifications-${user.id}`)
+      .channel(channelName)
       .on(
         "postgres_changes",
         {
@@ -70,6 +75,7 @@ export function useNotifications() {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
+          if (cancelled) return;
           const newNotif = payload.new as Notification;
 
           // Don't show notification for own actions
@@ -100,6 +106,7 @@ export function useNotifications() {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
+          if (cancelled) return;
           const updated = payload.new as Notification;
           setNotifications((prev) =>
             prev.map((n) => (n.id === updated.id ? updated : n))
@@ -118,6 +125,7 @@ export function useNotifications() {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
+          if (cancelled) return;
           const deleted = payload.old as Notification;
           setNotifications((prev) => prev.filter((n) => n.id !== deleted.id));
           if (!deleted.read) {
@@ -128,6 +136,7 @@ export function useNotifications() {
       .subscribe();
 
     return () => {
+      cancelled = true;
       sb.removeChannel(channel);
     };
   }, [user, isBypass]);

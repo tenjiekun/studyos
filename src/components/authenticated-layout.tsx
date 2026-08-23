@@ -4,6 +4,7 @@ import { useAuth } from "@/components/auth-provider";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { Sidebar } from "@/components/sidebar";
+import { UsernameOnboarding } from "@/components/username-onboarding";
 import { Flame } from "lucide-react";
 
 const PUBLIC_ROUTES = ["/login"];
@@ -46,6 +47,7 @@ export function AuthenticatedLayout({ children }: { children: React.ReactNode })
       <main className="flex-1 min-h-screen pb-16 md:pb-0">
         {children}
       </main>
+      <UsernameOnboarding />
     </div>
   );
 }

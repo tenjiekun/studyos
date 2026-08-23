@@ -82,7 +82,7 @@ function LoginPageInner() {
     }
 
     if (isSignUp) {
-      const result = await signUpWithEmail(email, password, username.trim());
+      const result = await signUpWithEmail(email, password, username.trim(), username.trim());
       if (result.error) {
         setAuthError(result.error);
       } else if (result.message) {
@@ -145,19 +145,23 @@ function LoginPageInner() {
             {/* Username field (signup only) */}
             {isSignUp && (
               <div className="space-y-2 animate-fade-in">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="username">Unique Username</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     id="username"
                     type="text"
-                    placeholder="Your display name"
+                    placeholder="e.g. study_master42"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
                     className="pl-9 h-10"
                     disabled={formLoading}
+                    maxLength={20}
                   />
                 </div>
+                <p className="text-[10px] text-muted-foreground">
+                  3–20 characters. Letters, numbers, and underscores only. This is how others will find and DM you.
+                </p>
               </div>
             )}
 

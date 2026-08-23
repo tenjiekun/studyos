@@ -174,7 +174,7 @@ export async function sendDMMessage(
   };
 }
 
-// Search users by username
+// Search users by username or name
 export async function searchUsers(
   query: string,
   currentUserId: string
@@ -190,6 +190,63 @@ export async function searchUsers(
     .limit(10);
 
   return (data as Profile[]) || [];
+}
+
+// Find a user by exact username
+export async function findByUsername(
+  username: string
+): Promise<Profile | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+
+  const { data } = await sb
+    .from("profiles")
+    .select("id, name, avatar_url, username")
+    .ilike("username", username.trim())
+    .single();
+
+  return (data as Profile) || null;
+}
+
+// Check if a username is available
+export async function checkUsernameAvailable(
+  username: string,
+  currentUserId?: string
+): Promise<{ available: boolean; error?: string }> {
+  const sb = getSupabase();
+  if (!sb) return { available: false, error: "Not connected" };
+
+  const trimmed = username.trim().toLowerCase();
+
+  // Validate format: 3-20 chars, alphanumeric + underscores
+  if (trimmed.length < 3) {
+    return { available: false, error: "Username must be at least 3 characters" };
+  }
+  if (trimmed.length > 20) {
+    return { available: false, error: "Username must be 20 characters or less" };
+  }
+  if (!/^[a-z0-9_]+$/.test(trimmed)) {
+    return { available: false, error: "Only letters, numbers, and underscores allowed" };
+  }
+
+  // Check uniqueness
+  let query = sb
+    .from("profiles")
+    .select("id")
+    .ilike("username", trimmed)
+    .limit(1);
+
+  const { data } = await query;
+
+  // If exists and not the current user, it's taken
+  if (data && data.length > 0) {
+    if (currentUserId && data[0].id === currentUserId) {
+      return { available: true }; // It's their own username
+    }
+    return { available: false, error: "Username is already taken" };
+  }
+
+  return { available: true };
 }
 
 // Local storage DM helpers (bypass mode)
