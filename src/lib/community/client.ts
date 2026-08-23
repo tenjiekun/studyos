@@ -98,17 +98,15 @@ export async function createGroup(
   const sb = getSupabase();
   if (!sb) return null;
 
-  // Auto-create profile if missing
-  const { data: existingProfile } = await sb
-    .from("profiles")
-    .select("id")
-    .eq("id", userId)
-    .single();
-
-  if (!existingProfile) {
-    await sb.from("profiles").insert({ id: userId, name: "Student" });
-    await sb.from("user_settings").insert({ user_id: userId });
-  }
+  // Ensure profile exists using upsert (creates or updates)
+  await sb.from("profiles").upsert(
+    { id: userId, name: "Student" },
+    { onConflict: "id" }
+  );
+  await sb.from("user_settings").upsert(
+    { user_id: userId },
+    { onConflict: "user_id" }
+  );
 
   const { data, error } = await sb
     .from("groups")
@@ -116,7 +114,10 @@ export async function createGroup(
     .select()
     .single();
 
-  if (error || !data) return null;
+  if (error) {
+    console.error("Group create error:", error.message, error);
+    return null;
+  }
 
   // Add creator as admin
   await sb.from("group_members").insert({

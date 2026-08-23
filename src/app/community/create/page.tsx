@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/components/auth-provider";
+import { getSupabase } from "@/lib/supabase/client";
 import { ArrowLeft, Flame, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -97,7 +98,22 @@ export default function CreateGroupPage() {
       );
 
       if (!group) {
-        setError("Failed to create group. Please try again.");
+        // Try to get more details about the error
+        const sb = getSupabase();
+        if (sb) {
+          const { data: profile } = await sb.from("profiles").select("id").eq("id", user.id).maybeSingle();
+          const { error: testInsert } = await sb.from("groups").insert({
+            name: name.trim(),
+            description: description.trim(),
+            category,
+            privacy,
+            created_by: user.id,
+          });
+          console.error("Profile exists:", !!profile, "Insert error:", testInsert);
+          setError(`Failed: ${testInsert?.message || "Unknown error"}. Check console for details.`);
+        } else {
+          setError("Failed to create group. Please try again.");
+        }
         setSubmitting(false);
         return;
       }
