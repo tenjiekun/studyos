@@ -19,10 +19,13 @@ export async function fetchSubjects(userId: string) {
 export async function createSubject(userId: string, name: string, color: string = "#6366f1", priority: string = "medium") {
   try {
     const sb = getSupabase();
-    if (!sb) return null;
-    const { data } = await sb.from("subjects").insert({ user_id: userId, name, color, priority }).select().single();
+    if (!sb) { console.error("[PlannerV2] No Supabase client"); return null; }
+    console.log("[PlannerV2] Creating subject:", { userId, name, color, priority });
+    const { data, error } = await sb.from("subjects").insert({ user_id: userId, name, color, priority }).select().single();
+    if (error) { console.error("[PlannerV2] Subject insert error:", error.message, error.code, error.details); return null; }
+    console.log("[PlannerV2] Subject created:", data);
     return data;
-  } catch { return null; }
+  } catch (e) { console.error("[PlannerV2] Subject create exception:", e); return null; }
 }
 
 export async function updateSubject(id: string, updates: Record<string, unknown>) {

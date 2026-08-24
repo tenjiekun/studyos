@@ -165,14 +165,19 @@ export default function YearPlanPage() {
   // Import parsed syllabus
   async function handleImportSyllabus() {
     if (!user) return;
+    console.log("[Import] Starting import of", parsedSubjects.length, "subjects");
     for (const ps of parsedSubjects) {
       // Check if subject already exists
       let existingSubject = subjects.find((s) => s.name.toLowerCase() === ps.name.toLowerCase());
       if (!existingSubject) {
+        console.log("[Import] Creating subject:", ps.name);
         const sub = await createSubject(user.id, ps.name);
+        console.log("[Import] Subject result:", sub);
         if (sub) {
           existingSubject = sub;
           setSubjects((prev) => [...prev, sub]);
+        } else {
+          console.error("[Import] Failed to create subject:", ps.name);
         }
       }
       if (!existingSubject) continue;
