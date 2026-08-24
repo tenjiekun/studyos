@@ -15,7 +15,7 @@ import {
 import { parseSyllabusText, ParsedSubject } from "@/lib/syllabus-parser";
 import { Plus, Target, BookOpen, Clock, ChevronRight, ChevronLeft, Upload, Settings, Trash2, GripVertical, Check, AlertTriangle, RefreshCw } from "lucide-react";
 
-type Tab = "overview" | "syllabus" | "distribute" | "months";
+type Tab = "overview" | "syllabus" | "months";
 
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
@@ -205,71 +205,6 @@ export default function YearPlanPage() {
     setParsedSubjects([]);
   }
 
-  // Distribute across year
-  async function handleDistribute() {
-    if (!user) return;
-
-    // Auto-create year plan if one doesn't exist
-    let activePlan = yearPlan;
-    if (!activePlan) {
-      console.log("[Distribute] No year plan found, creating one...");
-      activePlan = await createYearPlan({
-        user_id: user.id,
-        title: `${planStartDate.slice(0, 4)}–${planEndDate.slice(0, 4)} Study Plan`,
-        academic_year: `${planStartDate.slice(0, 4)}–${planEndDate.slice(0, 4)}`,
-        start_date: planStartDate,
-        end_date: planEndDate,
-        daily_study_hours: dailyHours,
-        weekly_study_days: weeklyDays,
-        buffer_pct: bufferPct,
-      });
-      if (!activePlan) { console.error("[Distribute] Failed to create year plan"); return; }
-      setYearPlan(activePlan);
-    }
-
-    console.log("[Distribute] Distributing", chapters.length, "chapters across", months.length, "months with", capacity.availableHours, "available hours");
-    const dist = distributeChapters({
-      chapters: chapters.map((c) => ({
-        id: c.id,
-        subject_id: c.subject_id,
-        estimated_hours: c.estimated_hours || 5,
-        priority: c.priority || "medium",
-      })),
-      subjects: subjects.map((s) => ({
-        id: s.id,
-        allocation_pct: s.allocation_pct || (100 / subjects.length),
-      })),
-      months,
-      totalAvailableHours: capacity.availableHours,
-    });
-    console.log("[Distribute] Generated", dist.length, "distributions");
-
-    console.log("[Distribute] Upserting to plan_distributions for plan:", activePlan.id);
-    await upsertDistributions(dist.map((d) => ({
-      user_id: user.id,
-      year_plan_id: yearPlan.id,
-      subject_id: d.subject_id,
-      month: d.month,
-      planned_hours: d.planned_hours,
-      planned_chapters: d.planned_chapters,
-    })));
-
-    console.log("[Distribute] Upsert complete, updating plan totals");
-    // Update plan totals
-    const totalPlannedHours = dist.reduce((a, d) => a + d.planned_hours, 0);
-    await updateYearPlan(activePlan.id, {
-      total_planned_hours: totalPlannedHours,
-      total_available_hours: capacity.availableHours,
-    });
-
-    console.log("[Distribute] Reloading distributions for plan:", activePlan.id);
-    const updatedDists = await fetchDistributions(activePlan.id);
-    setDistributions(updatedDists);
-    setYearPlan({ ...activePlan, total_planned_hours: totalPlannedHours, total_available_hours: capacity.availableHours });
-    console.log("[Distribute] Done! Switching to Monthly View");
-    setTab("months");
-  }
-
   // Delete subject
   async function handleDeleteSubject(id: string) {
     await deleteSubject(id);
@@ -349,10 +284,10 @@ export default function YearPlanPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 p-1 rounded-xl bg-muted/50 w-fit">
-        {(["overview", "syllabus", "distribute", "months"] as const).map((t) => (
+        {(["overview", "syllabus", "months"] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${tab === t ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            {t === "overview" ? "Overview" : t === "syllabus" ? "Syllabus" : t === "distribute" ? "Distribute" : "Monthly View"}
+            {t === "overview" ? "Overview" : t === "syllabus" ? "Syllabus" : "Monthly View"}
           </button>
         ))}
       </div>
@@ -482,94 +417,13 @@ export default function YearPlanPage() {
       )}
 
       {/* ===== DISTRIBUTE TAB ===== */}
-      {tab === "distribute" && (
-        <div className="space-y-6">
-          <div className="p-6 rounded-2xl bg-card border border-border/30 space-y-4">
-            <h2 className="text-sm font-medium">Distribute Syllabus Across Year</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <label className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground mb-1 block">Start Date</label>
-                <input type="date" value={planStartDate} onChange={(e) => setPlanStartDate(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl bg-background border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
-              </div>
-              <div>
-                <label className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground mb-1 block">End Date</label>
-                <input type="date" value={planEndDate} onChange={(e) => setPlanEndDate(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl bg-background border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
-              </div>
-              <div>
-                <label className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground mb-1 block">Daily Hours</label>
-                <input type="number" value={dailyHours} onChange={(e) => setDailyHours(Number(e.target.value))} min={1} max={16}
-                  className="w-full h-10 px-3 rounded-xl bg-background border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
-              </div>
-              <div>
-                <label className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground mb-1 block">Study Days/Week</label>
-                <input type="number" value={weeklyDays} onChange={(e) => setWeeklyDays(Number(e.target.value))} min={1} max={7}
-                  className="w-full h-10 px-3 rounded-xl bg-background border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
-              </div>
-            </div>
-            <div>
-              <label className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground mb-1 block">Buffer %</label>
-              <input type="range" value={bufferPct} onChange={(e) => setBufferPct(Number(e.target.value))} min={0} max={40} className="w-48" />
-              <span className="text-sm ml-3">{bufferPct}% ({capacity.bufferHours}h)</span>
-            </div>
-
-            {/* Capacity Summary */}
-            <div className="grid grid-cols-3 gap-4 p-4 rounded-xl bg-muted/30">
-              <div>
-                <p className="text-[10px] text-muted-foreground">Total Capacity</p>
-                <p className="text-lg font-medium">{capacity.totalHours}h</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground">Buffer</p>
-                <p className="text-lg font-medium">{capacity.bufferHours}h</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground">Available</p>
-                <p className="text-lg font-medium">{capacity.availableHours}h</p>
-              </div>
-            </div>
-
-            {/* Subject Allocation */}
-            {subjects.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground">Subject Allocation</p>
-                {subjects.map((sub) => {
-                  const pct = sub.allocation_pct || Math.round(100 / subjects.length);
-                  const hours = Math.round(capacity.availableHours * (pct / 100));
-                  return (
-                    <div key={sub.id} className="flex items-center gap-3">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: sub.color || "#6366f1" }} />
-                      <span className="text-sm flex-1">{sub.name}</span>
-                      <input type="number" value={pct} min={0} max={100}
-                        onChange={async (e) => {
-                          const val = Number(e.target.value);
-                          await updateSubject(sub.id, { allocation_pct: val });
-                          setSubjects((prev) => prev.map((s) => s.id === sub.id ? { ...s, allocation_pct: val } : s));
-                        }}
-                        className="w-16 h-8 px-2 rounded-lg bg-background border border-border/50 text-sm text-center focus:outline-none" />
-                      <span className="text-xs text-muted-foreground w-16 text-right">{hours}h</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <button onClick={handleDistribute} disabled={chapters.length === 0 || subjects.length === 0 || loading}
-              className="h-11 px-6 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed">
-              <RefreshCw className="w-4 h-4 inline mr-1.5" /> Distribute Across Year
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* ===== MONTHS TAB ===== */}
       {tab === "months" && (
         <div className="space-y-4">
           {distributions.length === 0 ? (
             <div className="text-center py-12 rounded-2xl bg-card border border-border/30">
               <p className="text-sm text-muted-foreground">No distribution yet</p>
-              <p className="text-xs text-muted-foreground/60 mt-1">Use the Distribute tab to plan your year</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">Distributions will appear here once created</p>
             </div>
           ) : (
             months.map((month) => {
