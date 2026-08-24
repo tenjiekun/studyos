@@ -152,20 +152,22 @@ export async function fetchDistributions(yearPlanId: string) {
     const { data } = await sb.from("plan_distributions").select("*, subjects(id,name,color)").eq("year_plan_id", yearPlanId).order("month");
     return data || [];
   } catch { return []; }
-}
-
-export async function upsertDistributions(distributions: Array<{
+}export async function upsertDistributions(distributions: Array<{
   user_id: string;
   year_plan_id: string;
   subject_id: string;
   month: string;
   planned_hours: number;
   planned_chapters: number;
-}>) {
+}>  ) {
   try {
     const sb = getSupabase();
     if (!sb || distributions.length === 0) return;
-    await sb.from("plan_distributions").upsert(distributions, { onConflict: "year_plan_id,subject_id,month" });
+    // Delete existing distributions for this year plan, then insert fresh
+    if (distributions.length > 0) {
+      await sb.from("plan_distributions").delete().eq("year_plan_id", distributions[0].year_plan_id);
+    }
+    await sb.from("plan_distributions").insert(distributions);
   } catch { /* silent */ }
 }
 
@@ -316,10 +318,15 @@ export function calculateAvailableHours(params: {
 /** Get all months in the plan range */
 export function getPlanMonths(startDate: string, endDate: string): string[] {
   const months: string[] = [];
-  const current = new Date(startDate + "-01");
-  const end = new Date(endDate);
+  // Handle both "YYYY-MM" and "YYYY-MM-DD" formats
+  const startParts = startDate.split("-");
+  const current = new Date(parseInt(startParts[0]), parseInt(startParts[1]) - 1, 1);
+  const endParts = endDate.split("-");
+  const end = new Date(parseInt(endParts[0]), parseInt(endParts[1]) - 1, 1);
   while (current <= end) {
-    months.push(current.toISOString().slice(0, 7));
+    const y = current.getFullYear();
+    const m = String(current.getMonth() + 1).padStart(2, "0");
+    months.push(`${y}-${m}`);
     current.setMonth(current.getMonth() + 1);
   }
   return months;

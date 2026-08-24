@@ -207,8 +207,27 @@ export default function YearPlanPage() {
 
   // Distribute across year
   async function handleDistribute() {
-    if (!user || !yearPlan) return;
+    if (!user) return;
 
+    // Auto-create year plan if one doesn't exist
+    let activePlan = yearPlan;
+    if (!activePlan) {
+      console.log("[Distribute] No year plan found, creating one...");
+      activePlan = await createYearPlan({
+        user_id: user.id,
+        title: `${planStartDate.slice(0, 4)}–${planEndDate.slice(0, 4)} Study Plan`,
+        academic_year: `${planStartDate.slice(0, 4)}–${planEndDate.slice(0, 4)}`,
+        start_date: planStartDate,
+        end_date: planEndDate,
+        daily_study_hours: dailyHours,
+        weekly_study_days: weeklyDays,
+        buffer_pct: bufferPct,
+      });
+      if (!activePlan) { console.error("[Distribute] Failed to create year plan"); return; }
+      setYearPlan(activePlan);
+    }
+
+    console.log("[Distribute] Distributing", chapters.length, "chapters across", months.length, "months with", capacity.availableHours, "available hours");
     const dist = distributeChapters({
       chapters: chapters.map((c) => ({
         id: c.id,
@@ -223,7 +242,9 @@ export default function YearPlanPage() {
       months,
       totalAvailableHours: capacity.availableHours,
     });
+    console.log("[Distribute] Generated", dist.length, "distributions");
 
+    console.log("[Distribute] Upserting to plan_distributions for plan:", activePlan.id);
     await upsertDistributions(dist.map((d) => ({
       user_id: user.id,
       year_plan_id: yearPlan.id,
@@ -233,16 +254,19 @@ export default function YearPlanPage() {
       planned_chapters: d.planned_chapters,
     })));
 
+    console.log("[Distribute] Upsert complete, updating plan totals");
     // Update plan totals
     const totalPlannedHours = dist.reduce((a, d) => a + d.planned_hours, 0);
-    await updateYearPlan(yearPlan.id, {
+    await updateYearPlan(activePlan.id, {
       total_planned_hours: totalPlannedHours,
       total_available_hours: capacity.availableHours,
     });
 
-    const updatedDists = await fetchDistributions(yearPlan.id);
+    console.log("[Distribute] Reloading distributions for plan:", activePlan.id);
+    const updatedDists = await fetchDistributions(activePlan.id);
     setDistributions(updatedDists);
-    setYearPlan({ ...yearPlan, total_planned_hours: totalPlannedHours, total_available_hours: capacity.availableHours });
+    setYearPlan({ ...activePlan, total_planned_hours: totalPlannedHours, total_available_hours: capacity.availableHours });
+    console.log("[Distribute] Done! Switching to Monthly View");
     setTab("months");
   }
 
@@ -531,7 +555,7 @@ export default function YearPlanPage() {
               </div>
             )}
 
-            <button onClick={handleDistribute} disabled={chapters.length === 0 || subjects.length === 0}
+            <button onClick={handleDistribute} disabled={chapters.length === 0 || subjects.length === 0 || loading}
               className="h-11 px-6 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed">
               <RefreshCw className="w-4 h-4 inline mr-1.5" /> Distribute Across Year
             </button>
