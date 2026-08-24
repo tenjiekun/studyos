@@ -390,52 +390,6 @@ export default function MonthPage() {
         </div>
       )}
 
-      {/* Unassigned chapters pool */}
-      {unassignedChapters.length > 0 && (
-        <div className="p-4 rounded-2xl bg-card border border-border/30">
-          <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground mb-3">
-            Unassigned Chapters ({unassignedChapters.length})
-          </p>
-          <p className="text-xs text-muted-foreground mb-3">
-            Drag or click + to add to a week below
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {unassignedChapters.slice(0, 20).map((ch) => {
-              const sub = subjects.find((s) => s.id === ch.subject_id);
-              return (
-                <button
-                  key={ch.id}
-                  onClick={() => {
-                    // Assign to first week by default
-                    if (weeks.length > 0) {
-                      handleAssignChapter(ch.id, weeks[0].start);
-                    }
-                  }}
-                  className="group flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background border border-border/30 hover:border-primary/30 transition-all text-left"
-                >
-                  <span
-                    className="text-[10px] px-1.5 py-0.5 rounded font-medium"
-                    style={{
-                      backgroundColor: (sub?.color || "#6366f1") + "15",
-                      color: sub?.color || "#6366f1",
-                    }}
-                  >
-                    {sub?.name || "?"}
-                  </span>
-                  <span className="text-xs">{ch.name}</span>
-                  <Plus className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                </button>
-              );
-            })}
-            {unassignedChapters.length > 20 && (
-              <span className="text-xs text-muted-foreground self-center">
-                +{unassignedChapters.length - 20} more
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Weekly breakdown */}
       <div className="space-y-6">
         <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground">
