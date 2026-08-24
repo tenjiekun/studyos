@@ -20,198 +20,248 @@ const TABLES = {
 
 // ===== Year Plans =====
 export async function fetchYearPlans(userId: string): Promise<YearPlan[]> {
-  const sb = getSupabase();
-  if (!sb) return [];
-  const { data } = await sb.from(TABLES.yearPlans).select("*").eq("user_id", userId).order("created_at", { ascending: false });
-  return (data || []) as YearPlan[];
+  try {
+    const sb = getSupabase();
+    if (!sb) return [];
+    const { data } = await sb.from(TABLES.yearPlans).select("*").eq("user_id", userId).order("created_at", { ascending: false });
+    return (data || []) as YearPlan[];
+  } catch { return []; }
 }
 
 export async function createYearPlan(userId: string, title: string, academicYear: string): Promise<YearPlan | null> {
-  const sb = getSupabase();
-  if (!sb) return null;
-  const { data } = await sb.from(TABLES.yearPlans).insert({ user_id: userId, title, academic_year: academicYear }).select().single();
-  return data as YearPlan | null;
+  try {
+    const sb = getSupabase();
+    if (!sb) return null;
+    const { data } = await sb.from(TABLES.yearPlans).insert({ user_id: userId, title, academic_year: academicYear }).select().single();
+    return data as YearPlan | null;
+  } catch { return null; }
 }
 
 // ===== Goals =====
 export async function fetchGoals(userId: string, period?: string, periodDate?: string): Promise<PlanGoal[]> {
-  const sb = getSupabase();
-  if (!sb) return [];
-  let query = sb.from(TABLES.goals).select("*").eq("user_id", userId);
-  if (period) query = query.eq("period", period);
-  if (periodDate) query = query.eq("period_date", periodDate);
-  const { data } = await query.order("created_at", { ascending: false });
-  return (data || []) as PlanGoal[];
+  try {
+    const sb = getSupabase();
+    if (!sb) return [];
+    let query = sb.from(TABLES.goals).select("*").eq("user_id", userId);
+    if (period) query = query.eq("period", period);
+    if (periodDate) query = query.eq("period_date", periodDate);
+    const { data } = await query.order("created_at", { ascending: false });
+    return (data || []) as PlanGoal[];
+  } catch { return []; }
 }
 
 export async function createGoal(goal: Omit<PlanGoal, "id" | "created_at" | "updated_at">): Promise<PlanGoal | null> {
-  const sb = getSupabase();
-  if (!sb) return null;
-  const { data } = await sb.from(TABLES.goals).insert(goal).select().single();
-  return data as PlanGoal | null;
+  try {
+    const sb = getSupabase();
+    if (!sb) return null;
+    const { data } = await sb.from(TABLES.goals).insert(goal).select().single();
+    return data as PlanGoal | null;
+  } catch { return null; }
 }
 
 export async function updateGoal(id: string, updates: Partial<PlanGoal>): Promise<void> {
-  const sb = getSupabase();
-  if (!sb) return;
-  await sb.from(TABLES.goals).update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id);
+  try {
+    const sb = getSupabase();
+    if (!sb) return;
+    await sb.from(TABLES.goals).update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id);
+  } catch { /* silent */ }
 }
 
 export async function deleteGoal(id: string): Promise<void> {
-  const sb = getSupabase();
-  if (!sb) return;
-  await sb.from(TABLES.goals).delete().eq("id", id);
+  try {
+    const sb = getSupabase();
+    if (!sb) return;
+    await sb.from(TABLES.goals).delete().eq("id", id);
+  } catch { /* silent */ }
 }
 
 // ===== Syllabus =====
 export async function fetchSyllabus(userId: string, subject?: string): Promise<SyllabusItem[]> {
-  const sb = getSupabase();
-  if (!sb) return [];
-  let query = sb.from(TABLES.syllabus).select("*").eq("user_id", userId);
-  if (subject) query = query.eq("subject", subject);
-  const { data } = await query.order("created_at", { ascending: false });
-  return (data || []) as SyllabusItem[];
+  try {
+    const sb = getSupabase();
+    if (!sb) return [];
+    let query = sb.from(TABLES.syllabus).select("*").eq("user_id", userId);
+    if (subject) query = query.eq("subject", subject);
+    const { data } = await query.order("created_at", { ascending: false });
+    return (data || []) as SyllabusItem[];
+  } catch { return []; }
 }
 
 export async function createSyllabusItem(item: Omit<SyllabusItem, "id" | "created_at" | "updated_at">): Promise<SyllabusItem | null> {
-  const sb = getSupabase();
-  if (!sb) return null;
-  const { data } = await sb.from(TABLES.syllabus).insert(item).select().single();
-  return data as SyllabusItem | null;
+  try {
+    const sb = getSupabase();
+    if (!sb) return null;
+    const { data } = await sb.from(TABLES.syllabus).insert(item).select().single();
+    return data as SyllabusItem | null;
+  } catch { return null; }
 }
 
 export async function updateSyllabusItem(id: string, updates: Partial<SyllabusItem>): Promise<void> {
-  const sb = getSupabase();
-  if (!sb) return;
-  await sb.from(TABLES.syllabus).update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id);
+  try {
+    const sb = getSupabase();
+    if (!sb) return;
+    await sb.from(TABLES.syllabus).update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id);
+  } catch { /* silent */ }
 }
 
 // ===== Scheduled Blocks =====
 export async function fetchBlocks(userId: string, startDate: string, endDate: string): Promise<ScheduledBlock[]> {
-  const sb = getSupabase();
-  if (!sb) return [];
-  const { data } = await sb.from(TABLES.blocks).select("*")
-    .eq("user_id", userId)
-    .gte("start_time", startDate)
-    .lte("end_time", endDate)
-    .order("start_time", { ascending: true });
-  return (data || []) as ScheduledBlock[];
+  try {
+    const sb = getSupabase();
+    if (!sb) return [];
+    const { data } = await sb.from(TABLES.blocks).select("*")
+      .eq("user_id", userId)
+      .gte("start_time", startDate)
+      .lte("end_time", endDate)
+      .order("start_time", { ascending: true });
+    return (data || []) as ScheduledBlock[];
+  } catch { return []; }
 }
 
 export async function createBlock(block: Omit<ScheduledBlock, "id" | "created_at" | "updated_at">): Promise<ScheduledBlock | null> {
-  const sb = getSupabase();
-  if (!sb) return null;
-  const { data } = await sb.from(TABLES.blocks).insert(block).select().single();
-  return data as ScheduledBlock | null;
+  try {
+    const sb = getSupabase();
+    if (!sb) return null;
+    const { data } = await sb.from(TABLES.blocks).insert(block).select().single();
+    return data as ScheduledBlock | null;
+  } catch { return null; }
 }
 
 export async function updateBlock(id: string, updates: Partial<ScheduledBlock>): Promise<void> {
-  const sb = getSupabase();
-  if (!sb) return;
-  await sb.from(TABLES.blocks).update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id);
+  try {
+    const sb = getSupabase();
+    if (!sb) return;
+    await sb.from(TABLES.blocks).update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id);
+  } catch { /* silent */ }
 }
 
 export async function deleteBlock(id: string): Promise<void> {
-  const sb = getSupabase();
-  if (!sb) return;
-  await sb.from(TABLES.blocks).delete().eq("id", id);
+  try {
+    const sb = getSupabase();
+    if (!sb) return;
+    await sb.from(TABLES.blocks).delete().eq("id", id);
+  } catch { /* silent */ }
 }
 
 // ===== Tests =====
 export async function fetchTests(userId: string, type?: string, startDate?: string, endDate?: string): Promise<Test[]> {
-  const sb = getSupabase();
-  if (!sb) return [];
-  let query = sb.from(TABLES.tests).select("*").eq("user_id", userId);
-  if (type) query = query.eq("type", type);
-  if (startDate) query = query.gte("date", startDate);
-  if (endDate) query = query.lte("date", endDate);
-  const { data } = await query.order("date", { ascending: false });
-  return (data || []) as Test[];
+  try {
+    const sb = getSupabase();
+    if (!sb) return [];
+    let query = sb.from(TABLES.tests).select("*").eq("user_id", userId);
+    if (type) query = query.eq("type", type);
+    if (startDate) query = query.gte("date", startDate);
+    if (endDate) query = query.lte("date", endDate);
+    const { data } = await query.order("date", { ascending: false });
+    return (data || []) as Test[];
+  } catch { return []; }
 }
 
 export async function createTest(test: Omit<Test, "id" | "created_at" | "updated_at" | "percentage">): Promise<Test | null> {
-  const sb = getSupabase();
-  if (!sb) return null;
-  const { data } = await sb.from(TABLES.tests).insert(test).select().single();
-  return data as Test | null;
+  try {
+    const sb = getSupabase();
+    if (!sb) return null;
+    const { data } = await sb.from(TABLES.tests).insert(test).select().single();
+    return data as Test | null;
+  } catch { return null; }
 }
 
 export async function updateTest(id: string, updates: Partial<Test>): Promise<void> {
-  const sb = getSupabase();
-  if (!sb) return;
-  await sb.from(TABLES.tests).update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id);
+  try {
+    const sb = getSupabase();
+    if (!sb) return;
+    await sb.from(TABLES.tests).update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id);
+  } catch { /* silent */ }
 }
 
 export async function deleteTest(id: string): Promise<void> {
-  const sb = getSupabase();
-  if (!sb) return;
-  await sb.from(TABLES.tests).delete().eq("id", id);
+  try {
+    const sb = getSupabase();
+    if (!sb) return;
+    await sb.from(TABLES.tests).delete().eq("id", id);
+  } catch { /* silent */ }
 }
 
 export async function fetchTestResults(testId: string): Promise<TestSubjectResult[]> {
-  const sb = getSupabase();
-  if (!sb) return [];
-  const { data } = await sb.from(TABLES.testResults).select("*").eq("test_id", testId);
-  return (data || []) as TestSubjectResult[];
+  try {
+    const sb = getSupabase();
+    if (!sb) return [];
+    const { data } = await sb.from(TABLES.testResults).select("*").eq("test_id", testId);
+    return (data || []) as TestSubjectResult[];
+  } catch { return []; }
 }
 
 export async function upsertTestResults(results: Omit<TestSubjectResult, "id" | "created_at">[]): Promise<void> {
-  const sb = getSupabase();
-  if (!sb || results.length === 0) return;
-  await sb.from(TABLES.testResults).upsert(results, { onConflict: "id" });
+  try {
+    const sb = getSupabase();
+    if (!sb || results.length === 0) return;
+    await sb.from(TABLES.testResults).upsert(results, { onConflict: "id" });
+  } catch { /* silent */ }
 }
 
 // ===== Free Time Logs =====
 export async function fetchFreeTimeLogs(userId: string, startDate: string, endDate: string): Promise<FreeTimeLog[]> {
-  const sb = getSupabase();
-  if (!sb) return [];
-  const { data } = await sb.from(TABLES.freeTime).select("*")
-    .eq("user_id", userId)
-    .gte("date", startDate)
-    .lte("date", endDate)
-    .order("date", { ascending: false });
-  return (data || []) as FreeTimeLog[];
+  try {
+    const sb = getSupabase();
+    if (!sb) return [];
+    const { data } = await sb.from(TABLES.freeTime).select("*")
+      .eq("user_id", userId)
+      .gte("date", startDate)
+      .lte("date", endDate)
+      .order("date", { ascending: false });
+    return (data || []) as FreeTimeLog[];
+  } catch { return []; }
 }
 
 export async function createFreeTimeLog(log: Omit<FreeTimeLog, "id" | "created_at">): Promise<FreeTimeLog | null> {
-  const sb = getSupabase();
-  if (!sb) return null;
-  const { data } = await sb.from(TABLES.freeTime).insert(log).select().single();
-  return data as FreeTimeLog | null;
+  try {
+    const sb = getSupabase();
+    if (!sb) return null;
+    const { data } = await sb.from(TABLES.freeTime).insert(log).select().single();
+    return data as FreeTimeLog | null;
+  } catch { return null; }
 }
 
 // ===== Daily Schedules =====
 export async function fetchDailySchedules(userId: string): Promise<DailySchedule[]> {
-  const sb = getSupabase();
-  if (!sb) return [];
-  const { data } = await sb.from(TABLES.dailySchedules).select("*").eq("user_id", userId).order("day_of_week");
-  return (data || []) as DailySchedule[];
+  try {
+    const sb = getSupabase();
+    if (!sb) return [];
+    const { data } = await sb.from(TABLES.dailySchedules).select("*").eq("user_id", userId).order("day_of_week");
+    return (data || []) as DailySchedule[];
+  } catch { return []; }
 }
 
 export async function upsertDailySchedule(schedule: Omit<DailySchedule, "id" | "created_at" | "updated_at">): Promise<DailySchedule | null> {
-  const sb = getSupabase();
-  if (!sb) return null;
-  const { data } = await sb.from(TABLES.dailySchedules)
-    .upsert({ ...schedule, updated_at: new Date().toISOString() }, { onConflict: "user_id,day_of_week" })
-    .select().single();
-  return data as DailySchedule | null;
+  try {
+    const sb = getSupabase();
+    if (!sb) return null;
+    const { data } = await sb.from(TABLES.dailySchedules)
+      .upsert({ ...schedule, updated_at: new Date().toISOString() }, { onConflict: "user_id,day_of_week" })
+      .select().single();
+    return data as DailySchedule | null;
+  } catch { return null; }
 }
 
 // ===== Monthly Plans =====
 export async function fetchMonthlyPlans(userId: string, yearId?: string): Promise<MonthlyPlan[]> {
-  const sb = getSupabase();
-  if (!sb) return [];
-  let query = sb.from(TABLES.monthlyPlans).select("*").eq("user_id", userId);
-  if (yearId) query = query.eq("year", yearId);
-  const { data } = await query.order("month", { ascending: false });
-  return (data || []) as MonthlyPlan[];
+  try {
+    const sb = getSupabase();
+    if (!sb) return [];
+    let query = sb.from(TABLES.monthlyPlans).select("*").eq("user_id", userId);
+    if (yearId) query = query.eq("year", yearId);
+    const { data } = await query.order("month", { ascending: false });
+    return (data || []) as MonthlyPlan[];
+  } catch { return []; }
 }
 
 export async function createMonthlyPlan(plan: Omit<MonthlyPlan, "id" | "created_at" | "updated_at">): Promise<MonthlyPlan | null> {
-  const sb = getSupabase();
-  if (!sb) return null;
-  const { data } = await sb.from(TABLES.monthlyPlans).insert(plan).select().single();
-  return data as MonthlyPlan | null;
+  try {
+    const sb = getSupabase();
+    if (!sb) return null;
+    const { data } = await sb.from(TABLES.monthlyPlans).insert(plan).select().single();
+    return data as MonthlyPlan | null;
+  } catch { return null; }
 }
 
 // ===== Analytics Helpers =====

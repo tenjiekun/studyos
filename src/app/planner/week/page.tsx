@@ -167,7 +167,7 @@ export default function WeekPage() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[13px] font-medium">Subject</Label>
-                  <Select value={form.subject || undefined} onValueChange={(v) => setForm({ ...form, subject: v ?? "" })}>
+                  <Select value={form.subject} onValueChange={(v) => setForm({ ...form, subject: v ?? "" })}>
                     <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Optional" /></SelectTrigger>
                     <SelectContent>
                       {SUBJECTS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}

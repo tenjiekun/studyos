@@ -131,7 +131,7 @@ export default function YearPlanPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label className="text-[13px] font-medium">Subject</Label>
-                  <Select value={newGoal.subject || undefined} onValueChange={(v) => setNewGoal({ ...newGoal, subject: v ?? "" })}>
+                  <Select value={newGoal.subject} onValueChange={(v) => setNewGoal({ ...newGoal, subject: v ?? "" })}>
                     <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Optional" /></SelectTrigger>
                     <SelectContent>
                       {SUBJECTS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
