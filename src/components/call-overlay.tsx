@@ -11,6 +11,12 @@ import {
 import { Button } from "@/components/ui/button";
 import type { CallType } from "@/hooks/use-webrtc";
 
+function formatCallDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+}
+
 interface CallOverlayProps {
   callType: CallType;
   localStream: MediaStream | null;
@@ -18,6 +24,7 @@ interface CallOverlayProps {
   otherUserName: string;
   isMuted: boolean;
   isCameraOff: boolean;
+  callDuration: number;
   onToggleMute: () => void;
   onToggleCamera: () => void;
   onEndCall: () => void;
@@ -66,6 +73,7 @@ export function CallOverlay({
   otherUserName,
   isMuted,
   isCameraOff,
+  callDuration,
   onToggleMute,
   onToggleCamera,
   onEndCall,
@@ -85,6 +93,7 @@ export function CallOverlay({
           <div>
             <h2 className="text-xl font-semibold">{otherUserName}</h2>
             <p className="text-sm text-muted-foreground mt-1">Voice Call</p>
+            <p className="text-xs text-muted-foreground mt-0.5 font-mono">{formatCallDuration(callDuration)}</p>
           </div>
 
           {/* Audio wave animation */}
@@ -141,6 +150,7 @@ export function CallOverlay({
                 </span>
               </div>
               <p className="text-white/80 text-sm">Connecting...</p>
+          <p className="text-white/60 text-xs font-mono">{formatCallDuration(callDuration)}</p>
             </div>
           </div>
         )}

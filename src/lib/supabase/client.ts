@@ -4,11 +4,13 @@ import { Database } from "./database.types";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-// Returns null if Supabase is not configured
+let _client: ReturnType<typeof createBrowserClient<Database>> | null = null;
+
+// Returns a singleton Supabase client, or null if not configured
 export function getSupabase() {
   if (!supabaseUrl || !supabaseAnonKey) return null;
-  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
+  if (!_client) {
+    _client = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
+  }
+  return _client;
 }
-
-// Convenience export — always returns a client (use only when you know it's configured)
-export const supabase = getSupabase()!;

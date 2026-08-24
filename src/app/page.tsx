@@ -14,17 +14,15 @@ import {
   getSubjectColor,
 } from "@/lib/helpers";
 import { StudyHeatmap } from "@/components/heatmap";
+import { RealtimeStatus } from "@/components/realtime-status";
 import {
-  Flame,
   CheckCircle2,
   Clock,
   ArrowRight,
   Play,
-  TrendingUp,
   Plus,
   BookOpen,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
@@ -34,21 +32,22 @@ export default function DashboardPage() {
   const [heatmapRange, setHeatmapRange] = useState<"30d" | "3m" | "6m" | "1y">("6m");
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => { setMounted(true); }, []);
 
   if (!mounted || loading) {
     return (
-      <div className="p-4 md:p-8 max-w-[1200px] mx-auto">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 w-48 bg-muted rounded" />
-          <div className="grid grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-24 bg-muted rounded-xl" />
-            ))}
-          </div>
-          <div className="h-48 bg-muted rounded-xl" />
+      <div className="p-6 md:p-10 max-w-[1200px] mx-auto space-y-8">
+        <div className="space-y-3">
+          <div className="skeleton h-9 w-56" />
+          <div className="skeleton h-4 w-36" />
+        </div>
+        <div className="grid grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => <div key={i} className="skeleton h-20 rounded-2xl" />)}
+        </div>
+        <div className="skeleton h-[200px] rounded-2xl" />
+        <div className="grid md:grid-cols-5 gap-6">
+          <div className="md:col-span-3 skeleton h-[300px] rounded-2xl" />
+          <div className="md:col-span-2 skeleton h-[300px] rounded-2xl" />
         </div>
       </div>
     );
@@ -64,25 +63,14 @@ export default function DashboardPage() {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
     const key = d.toISOString().slice(0, 10);
-    return {
-      day: getWeekDayName(key),
-      minutes: heatmapData[key] || 0,
-      date: key,
-    };
+    return { day: getWeekDayName(key), minutes: heatmapData[key] || 0, date: key };
   });
 
-  const maxWeekMinutes = Math.max(...weekData.map((d) => d.minutes), 1);
-  const hasData = tasks.length > 0 || sessions.length > 0;
-
-  // Build per-day task counts for heatmap tooltip
   const tasksPerDay: Record<string, number> = {};
   tasks.forEach((t) => {
-    if (t.completed) {
-      tasksPerDay[t.scheduled_date] = (tasksPerDay[t.scheduled_date] || 0) + 1;
-    }
+    if (t.completed) tasksPerDay[t.scheduled_date] = (tasksPerDay[t.scheduled_date] || 0) + 1;
   });
 
-  // Build per-day pomodoro counts for heatmap tooltip
   const pomodorosPerDay: Record<string, number> = {};
   sessions.forEach((s) => {
     if (s.session_type === "pomodoro") {
@@ -92,66 +80,54 @@ export default function DashboardPage() {
   });
 
   return (
-    <div className="p-4 md:p-8 max-w-[1200px] mx-auto space-y-6">
-      <div className="animate-fade-in">
-        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
-          {getGreeting()} 👋
-        </h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          {formatDate(new Date())}
-        </p>
+    <div className="p-6 md:p-10 max-w-[1200px] mx-auto space-y-10">
+      {/* Greeting */}
+      <div className="animate-fade-in flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-foreground">
+            {getGreeting()} 👋
+          </h1>
+          <p className="text-muted-foreground mt-1.5 text-sm font-medium">
+            {formatDate(new Date())}
+          </p>
+        </div>
+        <RealtimeStatus />
       </div>
 
-      <div className="grid grid-cols-3 gap-3 md:gap-4 animate-fade-in">
-        <Card className="relative overflow-hidden">
-          <CardContent className="p-4 md:p-5">
-            <div className="flex items-center gap-2 mb-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <span className="text-xs text-muted-foreground font-medium">Tasks</span>
-            </div>
-            <p className="text-xl md:text-2xl font-semibold tracking-tight">
-              {completedToday}
-              <span className="text-muted-foreground text-sm font-normal">
-                {" "}/ {todayTasks.length}
-              </span>
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden">
-          <CardContent className="p-4 md:p-5">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-4 h-4 text-primary" />
-              <span className="text-xs text-muted-foreground font-medium">Focus</span>
-            </div>
-            <p className="text-xl md:text-2xl font-semibold tracking-tight">
-              {formatMinutes(totalTodayMinutes)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden">
-          <CardContent className="p-4 md:p-5">
-            <div className="flex items-center gap-2 mb-2">
-              <Flame className="w-4 h-4 text-amber-500" />
-              <span className="text-xs text-muted-foreground font-medium">Streak</span>
-            </div>
-            <p className="text-xl md:text-2xl font-semibold tracking-tight">
-              {streak.current}
-              <span className="text-muted-foreground text-sm font-normal"> days</span>
-              {streak.current > 0 && <span className="text-base ml-1">🔥</span>}
-            </p>
-          </CardContent>
-        </Card>
+      {/* Metrics — typography-first, Apple style */}
+      <div className="grid grid-cols-3 gap-6 animate-fade-in" style={{ animationDelay: "0.05s" }}>
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+            Tasks
+          </p>
+          <p className="text-3xl font-semibold tracking-tight">
+            {completedToday}
+            <span className="text-lg text-muted-foreground font-normal">/{todayTasks.length}</span>
+          </p>
+        </div>
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+            Focus
+          </p>
+          <p className="text-3xl font-semibold tracking-tight">
+            {formatMinutes(totalTodayMinutes)}
+          </p>
+        </div>
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+            Streak
+          </p>
+          <p className="text-3xl font-semibold tracking-tight">
+            {streak.current}
+            <span className="text-lg text-muted-foreground font-normal"> days</span>
+          </p>
+        </div>
       </div>
 
-      <Card className="animate-fade-in">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium">Study Consistency</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
+      {/* Heatmap */}
+      <div className="animate-fade-in" style={{ animationDelay: "0.1s" }}>
+        <h2 className="text-sm font-medium text-muted-foreground mb-4">Study Consistency</h2>
+        <div className="p-5 rounded-2xl border border-border/50 bg-card/50">
           {Object.keys(heatmapData).length > 0 ? (
             <StudyHeatmap
               data={heatmapData}
@@ -161,35 +137,31 @@ export default function DashboardPage() {
               pomodorosPerDay={pomodorosPerDay}
             />
           ) : (
-            <div className="text-center py-8">
-              <BookOpen className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">
-                Start a focus session to see your heatmap
-              </p>
+            <div className="text-center py-10">
+              <BookOpen className="w-7 h-7 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">Start a focus session to see your heatmap</p>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <div className="grid md:grid-cols-5 gap-4 animate-fade-in">
-        <Card className="md:col-span-3">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium">Today&apos;s Tasks</CardTitle>
-              <Link href="/tasks">
-                <Button variant="ghost" size="sm" className="text-xs h-7 gap-1">
-                  View all <ArrowRight className="w-3 h-3" />
-                </Button>
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2">
+      {/* Tasks + Focus */}
+      <div className="grid md:grid-cols-5 gap-6 animate-fade-in" style={{ animationDelay: "0.15s" }}>
+        {/* Today's Tasks */}
+        <div className="md:col-span-3">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-medium text-muted-foreground">Today&apos;s Tasks</h2>
+            <Link href="/tasks">
+              <Button variant="ghost" size="sm" className="text-xs h-7 gap-1 text-muted-foreground hover:text-foreground">
+                View all <ArrowRight className="w-3 h-3" />
+              </Button>
+            </Link>
+          </div>
+          <div className="space-y-1">
             {todayTasks.length === 0 ? (
-              <div className="text-center py-8">
-                <CheckCircle2 className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground mb-3">
-                  No tasks for today yet
-                </p>
+              <div className="py-12 text-center">
+                <CheckCircle2 className="w-8 h-8 text-muted-foreground/20 mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground mb-3">No tasks for today yet</p>
                 <Link href="/tasks">
                   <Button variant="outline" size="sm" className="gap-1.5">
                     <Plus className="w-3.5 h-3.5" />
@@ -201,121 +173,103 @@ export default function DashboardPage() {
               todayTasks.slice(0, 5).map((task) => (
                 <div
                   key={task.id}
-                  className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/40 transition-colors duration-150 group"
                 >
                   <Checkbox
                     checked={task.completed}
                     onCheckedChange={() => toggleTask(task.id)}
-                    className="data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
+                    className="data-[state=checked]:bg-primary data-[state=checked]:border-primary shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <p
-                      className={`text-sm font-medium truncate ${
-                        task.completed ? "line-through text-muted-foreground" : ""
-                      }`}
-                    >
+                    <p className={`text-sm font-medium truncate transition-all duration-300 ${
+                      task.completed ? "line-through text-muted-foreground" : "text-foreground"
+                    }`}>
                       {task.title}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
                       {task.subject} · {task.estimated_minutes}min
                     </p>
                   </div>
                   <div
-                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                    className="w-1.5 h-1.5 rounded-full shrink-0 opacity-60"
                     style={{ backgroundColor: getSubjectColor(task.subject) }}
                   />
                 </div>
               ))
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="md:col-span-2">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Quick Focus</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="text-center py-4">
-              <p className="text-4xl font-semibold timer-display tracking-tight">
+        {/* Quick Focus */}
+        <div className="md:col-span-2">
+          <h2 className="text-sm font-medium text-muted-foreground mb-4">Quick Focus</h2>
+          <div className="p-6 rounded-2xl border border-border/50 bg-card/50 text-center space-y-5">
+            <div>
+              <p className="text-4xl font-semibold tracking-tight timer-display">
                 {formatMinutes(totalTodayMinutes)}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">studied today</p>
+              <p className="text-xs text-muted-foreground mt-1.5">studied today</p>
             </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Daily Goal</span>
-                <span className="font-medium">
-                  {formatMinutes(totalTodayMinutes)} / 6h
-                </span>
+            <div className="space-y-2 px-2">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Daily Goal</span>
+                <span className="font-medium text-foreground">{formatMinutes(totalTodayMinutes)} / 6h</span>
               </div>
-              <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-primary transition-all duration-500"
-                  style={{
-                    width: `${Math.min((totalTodayMinutes / 360) * 100, 100)}%`,
-                  }}
+                  className="h-full rounded-full bg-primary transition-all duration-700 ease-out"
+                  style={{ width: `${Math.min((totalTodayMinutes / 360) * 100, 100)}%` }}
                 />
               </div>
             </div>
             <Link href="/focus" className="block">
-              <Button className="w-full gap-2" size="lg">
-                <Play className="w-4 h-4" />
-                Start Focus Session
+              <Button className="w-full gap-2 h-11 rounded-xl" size="lg">
+                <Play className="w-4 h-4" fill="currentColor" />
+                Start Focus
               </Button>
             </Link>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
-      <Card className="animate-fade-in">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium">This Week</CardTitle>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <TrendingUp className="w-3 h-3" />
-              <span>
-                {formatMinutes(weekData.reduce((a, d) => a + d.minutes, 0))} total
-              </span>
-            </div>
+      {/* This Week — bar chart */}
+      <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-medium text-muted-foreground">This Week</h2>
+          <p className="text-xs text-muted-foreground">
+            {formatMinutes(weekData.reduce((a, d) => a + d.minutes, 0))} total
+          </p>
+        </div>
+        <div className="p-5 rounded-2xl border border-border/50 bg-card/50">
+          <div className="flex items-end gap-3 h-28">
+            {weekData.map((day, i) => {
+              const maxMin = Math.max(...weekData.map((d) => d.minutes), 1);
+              const height =
+                day.minutes > 0
+                  ? Math.max((day.minutes / maxMin) * 100, 6)
+                  : 3;
+              const isToday = day.date === today;
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                  <div
+                    className={`w-full rounded-lg transition-all duration-500 ease-out ${
+                      isToday ? "bg-primary" : "bg-primary/20"
+                    }`}
+                    style={{ height: `${height}%`, minHeight: "3px" }}
+                  />
+                  <span
+                    className={`text-[10px] font-medium ${
+                      isToday ? "text-primary" : "text-muted-foreground/60"
+                    }`}
+                  >
+                    {day.day}
+                  </span>
+                </div>
+              );
+            })}
           </div>
-        </CardHeader>
-        <CardContent>
-          {hasData ? (
-            <div className="flex items-end gap-2 h-32">
-              {weekData.map((day, i) => {
-                const height =
-                  day.minutes > 0
-                    ? Math.max((day.minutes / maxWeekMinutes) * 100, 4)
-                    : 2;
-                const isToday = day.date === today;
-                return (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
-                    <div
-                      className={`w-full rounded-md transition-all duration-500 ${
-                        isToday ? "bg-primary" : "bg-primary/25"
-                      }`}
-                      style={{ height: `${height}%`, minHeight: "2px" }}
-                    />
-                    <span
-                      className={`text-[10px] font-medium ${
-                        isToday ? "text-primary" : "text-muted-foreground"
-                      }`}
-                    >
-                      {day.day}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-sm text-muted-foreground">
-                Study data will appear here once you start tracking
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

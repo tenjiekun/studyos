@@ -135,11 +135,26 @@ export function useNotifications() {
       )
       .subscribe();
 
+    // Polling fallback every 8 seconds
+    const pollInterval = setInterval(() => {
+      if (!cancelled) loadNotifications();
+    }, 8000);
+
+    // Refresh on tab focus
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && !cancelled) {
+        loadNotifications();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
     return () => {
       cancelled = true;
       sb.removeChannel(channel);
+      clearInterval(pollInterval);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [user, isBypass]);
+  }, [user, isBypass, loadNotifications]);
 
   const handleMarkAsRead = useCallback(async (notificationId: string) => {
     const success = await markAsRead(notificationId);

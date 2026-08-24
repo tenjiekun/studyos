@@ -1,5 +1,5 @@
 import { getSupabase } from "@/lib/supabase/client";
-import { Conversation, DMMessage, Profile } from "@/lib/types";
+import { Conversation, DMMessage, Profile, CallLog } from "@/lib/types";
 import { showBrowserNotification } from "@/lib/community/notifications";
 
 // Get or create a conversation between two users
@@ -273,4 +273,104 @@ export function localSearchUsers(query: string, currentUserId: string): Profile[
 
 export function localFetchConversations(userId: string) {
   return [] as { conversation: Conversation; otherUser: Profile | null; lastMessage: DMMessage | null }[];
+}
+
+// ===== Call Logs =====
+
+// Start a call log entry
+export async function startCallLog(
+  conversationId: string,
+  callerId: string,
+  receiverId: string,
+  callType: "audio" | "video"
+): Promise<string | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+
+  const { data, error } = await sb
+    .from("call_logs")
+    .insert({
+      conversation_id: conversationId,
+      caller_id: callerId,
+      receiver_id: receiverId,
+      call_type: callType,
+      status: "completed",
+      started_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error("Failed to start call log:", error.message);
+    return null;
+  }
+  return data?.id || null;
+}
+
+// End a call log entry
+export async function endCallLog(
+  callLogId: string,
+  status: "completed" | "missed" | "declined"
+): Promise<void> {
+  const sb = getSupabase();
+  if (!sb) return;
+
+  const now = new Date().toISOString();
+
+  // Get the started_at to calculate duration
+  const { data: log } = await sb
+    .from("call_logs")
+    .select("started_at")
+    .eq("id", callLogId)
+    .single();
+
+  let duration = 0;
+  if (log) {
+    duration = Math.floor(
+      (new Date(now).getTime() - new Date(log.started_at).getTime()) / 1000
+    );
+  }
+
+  await sb
+    .from("call_logs")
+    .update({
+      ended_at: now,
+      duration_seconds: duration,
+      status,
+    })
+    .eq("id", callLogId);
+}
+
+// Fetch call history for a conversation
+export async function fetchCallHistory(
+  conversationId: string,
+  limit = 20
+): Promise<CallLog[]> {
+  const sb = getSupabase();
+  if (!sb) return [];
+
+  const { data: logs } = await sb
+    .from("call_logs")
+    .select("*")
+    .eq("conversation_id", conversationId)
+    .order("started_at", { ascending: false })
+    .limit(limit);
+
+  if (!logs) return [];
+
+  // Fetch profiles for callers/receivers
+  const userIds = [...new Set(logs.flatMap((l) => [l.caller_id, l.receiver_id]))];
+  const { data: profiles } = await sb
+    .from("profiles")
+    .select("id, name, avatar_url, username")
+    .in("id", userIds);
+
+  const profileMap = new Map<string, Profile>();
+  profiles?.forEach((p) => profileMap.set(p.id, p as Profile));
+
+  return logs.map((log) => ({
+    ...log,
+    caller: profileMap.get(log.caller_id),
+    receiver: profileMap.get(log.receiver_id),
+  })) as CallLog[];
 }

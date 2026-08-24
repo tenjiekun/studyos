@@ -360,9 +360,102 @@ export interface Database {
         };
         Relationships: [];
       };
+      call_logs: {
+        Row: {
+          id: string;
+          conversation_id: string;
+          caller_id: string;
+          receiver_id: string;
+          call_type: string;
+          status: string;
+          started_at: string;
+          ended_at: string | null;
+          duration_seconds: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          conversation_id: string;
+          caller_id: string;
+          receiver_id: string;
+          call_type?: string;
+          status?: string;
+          started_at?: string;
+          ended_at?: string | null;
+          duration_seconds?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          conversation_id?: string;
+          caller_id?: string;
+          receiver_id?: string;
+          call_type?: string;
+          status?: string;
+          started_at?: string;
+          ended_at?: string | null;
+          duration_seconds?: number | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      call_signals: {
+        Row: {
+          id: string;
+          conversation_id: string;
+          sender_id: string;
+          signal_type: string;
+          call_type: string | null;
+          sender_name: string | null;
+          signal_data: any;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          conversation_id: string;
+          sender_id: string;
+          signal_type: string;
+          call_type?: string | null;
+          sender_name?: string | null;
+          signal_data?: any;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          conversation_id?: string;
+          sender_id?: string;
+          signal_type?: string;
+          call_type?: string | null;
+          sender_name?: string | null;
+          signal_data?: any;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {};
-    Functions: {};
+    Functions: {
+      create_task: {
+        Args: { p_title: string; p_subject: string; p_description: string | null; p_priority: string; p_estimated_minutes: number; p_scheduled_date: string; p_completed: boolean };
+        Returns: any;
+      };
+      update_task: {
+        Args: { p_id: string; p_title?: string | null; p_subject?: string | null; p_description?: string | null; p_priority?: string | null; p_estimated_minutes?: number | null; p_scheduled_date?: string | null; p_completed?: boolean | null; p_completed_at?: string | null };
+        Returns: void;
+      };
+      delete_task: {
+        Args: { p_id: string };
+        Returns: void;
+      };
+      toggle_task: {
+        Args: { p_id: string };
+        Returns: void;
+      };
+      create_session: {
+        Args: { p_task_id: string | null; p_subject: string | null; p_start_time: string; p_end_time: string | null; p_duration_minutes: number; p_session_type: string };
+        Returns: any;
+      };
+    };
     Enums: {};
     CompositeTypes: {};
   };

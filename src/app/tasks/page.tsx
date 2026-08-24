@@ -3,46 +3,19 @@
 import { useEffect, useState } from "react";
 import { useStudyData } from "@/lib/use-study-data";
 import {
-  getTodayStr,
-  getWeekStart,
-  getMonthStart,
-  getSubjectColor,
-  formatMinutes,
+  getTodayStr, getWeekStart, getMonthStart, getSubjectColor, formatMinutes,
 } from "@/lib/helpers";
 import { Task, SUBJECTS } from "@/lib/types";
 import {
-  Plus,
-  CheckCircle2,
-  Circle,
-  Trash2,
-  Pencil,
-  Calendar,
-  Filter,
-  X,
-  ArrowUpRight,
-  ArrowDownRight,
-  Minus,
+  Plus, CheckCircle2, Circle, Trash2, Pencil, Calendar, X,
+  ArrowUpRight, ArrowDownRight, Minus,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type ViewTab = "today" | "weekly" | "monthly" | "all";
 
@@ -56,12 +29,8 @@ interface TaskFormData {
 }
 
 const defaultForm: TaskFormData = {
-  title: "",
-  subject: "Mathematics",
-  description: "",
-  priority: "medium",
-  estimated_minutes: 30,
-  scheduled_date: getTodayStr(),
+  title: "", subject: "Mathematics", description: "", priority: "medium",
+  estimated_minutes: 30, scheduled_date: getTodayStr(),
 };
 
 export default function TasksPage() {
@@ -75,24 +44,17 @@ export default function TasksPage() {
   const [mounted, setMounted] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => { setMounted(true); }, []);
 
   if (!mounted || loading) {
     return (
-      <div className="p-4 md:p-8 max-w-[1200px] mx-auto">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 w-32 bg-muted rounded" />
-          <div className="flex gap-2">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-8 w-20 bg-muted rounded-lg" />
-            ))}
-          </div>
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-20 bg-muted rounded-xl" />
-          ))}
+      <div className="p-6 md:p-10 max-w-[1200px] mx-auto space-y-6">
+        <div className="space-y-3">
+          <div className="skeleton h-9 w-32" />
+          <div className="skeleton h-4 w-48" />
         </div>
+        <div className="skeleton h-10 w-64 rounded-2xl" />
+        {[1, 2, 3].map((i) => <div key={i} className="skeleton h-16 rounded-2xl" />)}
       </div>
     );
   }
@@ -133,12 +95,8 @@ export default function TasksPage() {
   function openEditTask(task: Task) {
     setEditingTask(task);
     setForm({
-      title: task.title,
-      subject: task.subject,
-      description: task.description || "",
-      priority: task.priority,
-      estimated_minutes: task.estimated_minutes,
-      scheduled_date: task.scheduled_date,
+      title: task.title, subject: task.subject, description: task.description || "",
+      priority: task.priority, estimated_minutes: task.estimated_minutes, scheduled_date: task.scheduled_date,
     });
     setDialogOpen(true);
   }
@@ -147,22 +105,14 @@ export default function TasksPage() {
     if (!form.title.trim()) return;
     if (editingTask) {
       await updateTask(editingTask.id, {
-        title: form.title,
-        subject: form.subject,
-        description: form.description,
-        priority: form.priority,
-        estimated_minutes: form.estimated_minutes,
-        scheduled_date: form.scheduled_date,
+        title: form.title, subject: form.subject, description: form.description,
+        priority: form.priority, estimated_minutes: form.estimated_minutes, scheduled_date: form.scheduled_date,
       });
     } else {
       await addTask({
-        title: form.title,
-        subject: form.subject,
-        description: form.description,
-        priority: form.priority,
-        estimated_minutes: form.estimated_minutes,
-        scheduled_date: form.scheduled_date,
-        completed: false,
+        title: form.title, subject: form.subject, description: form.description,
+        priority: form.priority, estimated_minutes: form.estimated_minutes,
+        scheduled_date: form.scheduled_date, completed: false,
       });
     }
     setDialogOpen(false);
@@ -174,9 +124,9 @@ export default function TasksPage() {
   }
 
   const priorityIcon = (p: string) => {
-    if (p === "high") return <ArrowUpRight className="w-3 h-3 text-red-500" />;
-    if (p === "low") return <ArrowDownRight className="w-3 h-3 text-blue-500" />;
-    return <Minus className="w-3 h-3 text-amber-500" />;
+    if (p === "high") return <ArrowUpRight className="w-3 h-3 text-red-500/80" />;
+    if (p === "low") return <ArrowDownRight className="w-3 h-3 text-blue-500/80" />;
+    return <Minus className="w-3 h-3 text-amber-500/80" />;
   };
 
   const views: { value: ViewTab; label: string }[] = [
@@ -187,29 +137,31 @@ export default function TasksPage() {
   ];
 
   return (
-    <div className="p-4 md:p-8 max-w-[1200px] mx-auto space-y-6">
-      <div className="flex items-center justify-between animate-fade-in">
+    <div className="p-6 md:p-10 max-w-[1200px] mx-auto space-y-8">
+      {/* Header */}
+      <div className="flex items-start justify-between animate-fade-in">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Tasks</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Tasks</h1>
+          <p className="text-sm text-muted-foreground mt-1.5 font-medium">
             {completedTasks} / {totalTasks} completed · {formatMinutes(totalEstimated)} estimated
           </p>
         </div>
-        <Button onClick={openNewTask} className="gap-1.5">
+        <Button onClick={openNewTask} className="gap-1.5 h-10 px-5 rounded-xl shadow-sm shadow-primary/10">
           <Plus className="w-4 h-4" />
           Add Task
         </Button>
       </div>
 
-      <div className="flex items-center gap-1 animate-fade-in">
+      {/* View tabs — segmented control */}
+      <div className="flex items-center gap-1 p-1 rounded-2xl bg-muted/50 w-fit animate-fade-in">
         {views.map((v) => (
           <button
             key={v.value}
             onClick={() => setView(v.value)}
-            className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+            className={`px-4 py-2 text-[13px] font-medium rounded-xl transition-all duration-200 ${
               view === v.value
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {v.label}
@@ -217,33 +169,29 @@ export default function TasksPage() {
         ))}
       </div>
 
+      {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap animate-fade-in">
-        <div className="flex items-center gap-1.5">
-          <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+        <div className="flex items-center gap-2">
           <Select value={filterSubject} onValueChange={(v) => v && setFilterSubject(v)}>
-            <SelectTrigger className="w-[140px] h-8 text-xs">
+            <SelectTrigger className="w-[140px] h-9 rounded-xl text-[13px]">
               <SelectValue placeholder="Subject" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Subjects</SelectItem>
-              {SUBJECTS.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
+              {SUBJECTS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 p-0.5 rounded-xl bg-muted/40">
           {(["all", "todo", "completed"] as const).map((s) => (
             <button
               key={s}
               onClick={() => setFilterStatus(s)}
-              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors capitalize ${
+              className={`px-3 py-1.5 text-[12px] font-medium rounded-lg transition-all duration-200 capitalize ${
                 filterStatus === s
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {s}
@@ -253,226 +201,172 @@ export default function TasksPage() {
 
         {(filterSubject !== "all" || filterStatus !== "all") && (
           <button
-            onClick={() => {
-              setFilterSubject("all");
-              setFilterStatus("all");
-            }}
-            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+            onClick={() => { setFilterSubject("all"); setFilterStatus("all"); }}
+            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
           >
             <X className="w-3 h-3" /> Clear
           </button>
         )}
       </div>
 
-      <div className="space-y-2 animate-fade-in">
+      {/* Task list */}
+      <div className="space-y-1 animate-fade-in">
         {filteredTasks.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <CheckCircle2 className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">
-                {view === "today"
-                  ? "No tasks for today. Add one to get started!"
-                  : "No tasks match your filters."}
-              </p>
-              <Button variant="outline" size="sm" className="mt-3" onClick={openNewTask}>
-                <Plus className="w-3.5 h-3.5 mr-1" /> Add Task
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="py-16 text-center">
+            <CheckCircle2 className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">
+              {view === "today" ? "No tasks for today. Add one to get started!" : "No tasks match your filters."}
+            </p>
+            <Button variant="outline" size="sm" className="mt-4 rounded-xl" onClick={openNewTask}>
+              <Plus className="w-3.5 h-3.5 mr-1" /> Add Task
+            </Button>
+          </div>
         ) : (
           filteredTasks.map((task) => (
-            <Card
+            <div
               key={task.id}
-              className={`group transition-all duration-200 hover:shadow-sm ${
-                task.completed ? "opacity-60" : ""
+              className={`group flex items-start gap-3 px-4 py-3.5 rounded-2xl transition-all duration-200 hover:bg-muted/40 ${
+                task.completed ? "opacity-50" : ""
               }`}
             >
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <button
-                    onClick={() => toggleTask(task.id)}
-                    className="mt-0.5 shrink-0"
-                  >
-                    {task.completed ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-500 animate-scale-check" />
-                    ) : (
-                      <Circle className="w-5 h-5 text-muted-foreground/40 hover:text-primary transition-colors" />
-                    )}
-                  </button>
+              <button onClick={() => toggleTask(task.id)} className="mt-0.5 shrink-0">
+                {task.completed ? (
+                  <CheckCircle2 className="w-5 h-5 text-primary animate-scale-check" />
+                ) : (
+                  <Circle className="w-5 h-5 text-muted-foreground/30 hover:text-primary transition-colors" />
+                )}
+              </button>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3
-                        className={`text-sm font-medium ${
-                          task.completed ? "line-through text-muted-foreground" : ""
-                        }`}
-                      >
-                        {task.title}
-                      </h3>
-                      {priorityIcon(task.priority)}
-                    </div>
-                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                      <Badge
-                        variant="secondary"
-                        className="text-[10px] px-1.5 py-0"
-                        style={{
-                          backgroundColor: getSubjectColor(task.subject) + "18",
-                          color: getSubjectColor(task.subject),
-                          border: `1px solid ${getSubjectColor(task.subject)}30`,
-                        }}
-                      >
-                        {task.subject}
-                      </Badge>
-                      <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
-                        <Calendar className="w-2.5 h-2.5" />
-                        {task.scheduled_date}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">
-                        ~{task.estimated_minutes}min
-                      </span>
-                    </div>
-                    {task.description && (
-                      <p className="text-xs text-muted-foreground mt-1.5 line-clamp-1">
-                        {task.description}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0"
-                      onClick={() => openEditTask(task)}
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                      onClick={() => setDeleteConfirm(task.id)}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className={`text-[14px] font-medium transition-all duration-300 ${
+                    task.completed ? "line-through text-muted-foreground" : "text-foreground"
+                  }`}>
+                    {task.title}
+                  </h3>
+                  {priorityIcon(task.priority)}
                 </div>
-              </CardContent>
-            </Card>
+                <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
+                  <span
+                    className="text-[11px] font-medium px-2 py-0.5 rounded-full"
+                    style={{
+                      backgroundColor: getSubjectColor(task.subject) + "12",
+                      color: getSubjectColor(task.subject),
+                    }}
+                  >
+                    {task.subject}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
+                    <Calendar className="w-2.5 h-2.5" />
+                    {task.scheduled_date}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    ~{task.estimated_minutes}min
+                  </span>
+                </div>
+                {task.description && (
+                  <p className="text-[12px] text-muted-foreground mt-1.5 line-clamp-1">{task.description}</p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-xl" onClick={() => openEditTask(task)}>
+                  <Pencil className="w-3.5 h-3.5" />
+                </Button>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-xl text-destructive hover:text-destructive"
+                  onClick={() => setDeleteConfirm(task.id)}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
           ))
         )}
       </div>
 
+      {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingTask ? "Edit Task" : "New Task"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Title</Label>
-              <Input
-                placeholder="What do you need to study?"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
+        <DialogContent className="sm:max-w-md rounded-3xl p-0 overflow-hidden">
+          <div className="p-6 pb-4">
+            <DialogHeader className="mb-5">
+              <DialogTitle className="text-lg font-semibold">{editingTask ? "Edit Task" : "New Task"}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Subject</Label>
-                <Select
-                  value={form.subject}
-                  onValueChange={(v) => v && setForm({ ...form, subject: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SUBJECTS.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Priority</Label>
-                <Select
-                  value={form.priority}
-                  onValueChange={(v) => v && setForm({ ...form, priority: v as "low" | "medium" | "high" })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Est. Minutes</Label>
+                <Label className="text-[13px] font-medium">Title</Label>
                 <Input
-                  type="number"
-                  min={5}
-                  step={5}
-                  value={form.estimated_minutes}
-                  onChange={(e) => setForm({ ...form, estimated_minutes: Number(e.target.value) })}
+                  placeholder="What do you need to study?"
+                  className="h-11 rounded-xl"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Date</Label>
-                <Input
-                  type="date"
-                  value={form.scheduled_date}
-                  onChange={(e) => setForm({ ...form, scheduled_date: e.target.value })}
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label className="text-[13px] font-medium">Subject</Label>
+                  <Select value={form.subject} onValueChange={(v) => v && setForm({ ...form, subject: v })}>
+                    <SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {SUBJECTS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[13px] font-medium">Priority</Label>
+                  <Select value={form.priority} onValueChange={(v) => v && setForm({ ...form, priority: v as "low" | "medium" | "high" })}>
+                    <SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Description (optional)</Label>
-              <Textarea
-                placeholder="Any notes about this task..."
-                rows={2}
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-              />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label className="text-[13px] font-medium">Est. Minutes</Label>
+                  <Input type="number" min={5} step={5} className="h-11 rounded-xl"
+                    value={form.estimated_minutes} onChange={(e) => setForm({ ...form, estimated_minutes: Number(e.target.value) })} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[13px] font-medium">Date</Label>
+                  <Input type="date" className="h-11 rounded-xl"
+                    value={form.scheduled_date} onChange={(e) => setForm({ ...form, scheduled_date: e.target.value })} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[13px] font-medium">Description (optional)</Label>
+                <Textarea placeholder="Any notes about this task..." rows={2} className="rounded-xl resize-none"
+                  value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave} disabled={!form.title.trim()}>
+          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border/50 bg-muted/20">
+            <Button variant="ghost" onClick={() => setDialogOpen(false)} className="rounded-xl">Cancel</Button>
+            <Button onClick={handleSave} disabled={!form.title.trim()} className="rounded-xl px-6">
               {editingTask ? "Save Changes" : "Add Task"}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
+      {/* Delete Confirm Dialog */}
       <Dialog open={deleteConfirm !== null} onOpenChange={() => setDeleteConfirm(null)}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Delete Task</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete this task? This cannot be undone.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
-            >
+        <DialogContent className="sm:max-w-sm rounded-3xl p-0 overflow-hidden">
+          <div className="p-6">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-semibold">Delete Task</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground mt-3">
+              Are you sure you want to delete this task? This cannot be undone.
+            </p>
+          </div>
+          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border/50 bg-muted/20">
+            <Button variant="ghost" onClick={() => setDeleteConfirm(null)} className="rounded-xl">Cancel</Button>
+            <Button variant="destructive" className="rounded-xl" onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>
               Delete
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

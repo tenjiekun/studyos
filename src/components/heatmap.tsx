@@ -31,9 +31,7 @@ interface HeatmapProps {
   range?: Range;
   onRangeChange?: (range: Range) => void;
   compact?: boolean;
-  /** Optional: tasks completed per day for tooltip */
   tasksPerDay?: Record<string, number>;
-  /** Optional: pomodoro sessions per day for tooltip */
   pomodorosPerDay?: Record<string, number>;
 }
 
@@ -45,7 +43,6 @@ export function StudyHeatmap({
   tasksPerDay,
   pomodorosPerDay,
 }: HeatmapProps) {
-
   const days = useMemo(() => {
     const now = new Date();
     const totalDays =
@@ -64,16 +61,16 @@ export function StudyHeatmap({
     return result;
   }, [data, range]);
 
-  // Group into weeks
+  // Group into weeks (each week is a column)
   const weeks = useMemo(() => {
     const result: (typeof days)[] = [];
     let current: typeof days = [];
-    
+
     // Pad the first week
     if (days.length > 0) {
       const firstDow = days[0].dayOfWeek;
       for (let i = 0; i < firstDow; i++) {
-        current.push({ date: `pad-${i}`, minutes: -1, dayOfWeek: i });
+        current.push({ date: `pad-start-${i}`, minutes: -1, dayOfWeek: i });
       }
     }
 
@@ -88,6 +85,27 @@ export function StudyHeatmap({
     return result;
   }, [days]);
 
+  // Build month labels aligned to week columns
+  const monthLabels = useMemo(() => {
+    const labels: { month: string; weekIndex: number }[] = [];
+    let lastMonth = "";
+    weeks.forEach((week, wi) => {
+      // Find the first real (non-padded) day in this week
+      const firstDay = week.find((d) => !d.date.startsWith("pad-"));
+      if (firstDay) {
+        const month = new Date(firstDay.date + "T12:00:00").toLocaleDateString(
+          "en-US",
+          { month: "short" }
+        );
+        if (month !== lastMonth) {
+          labels.push({ month, weekIndex: wi });
+          lastMonth = month;
+        }
+      }
+    });
+    return labels;
+  }, [weeks]);
+
   const ranges: { value: Range; label: string }[] = [
     { value: "30d", label: "30 days" },
     { value: "3m", label: "3 months" },
@@ -96,7 +114,7 @@ export function StudyHeatmap({
   ];
 
   const cellSize = compact ? "w-2.5 h-2.5" : "w-3 h-3";
-  const cellGap = compact ? "gap-[2px]" : "gap-[3px]";
+  const dayLabels = ["", "Mon", "", "Wed", "", "Fri", ""];
 
   return (
     <div className="animate-fade-in">
@@ -118,21 +136,47 @@ export function StudyHeatmap({
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <div className={`inline-flex flex-col ${cellGap}`}>
-          {/* Week labels */}
-          <div className={`flex ${cellGap} mb-1`}>
-            {weeks[0]?.map((_, i) => (
-              <div key={i} className={`${cellSize}`} />
+      <div className="overflow-x-auto pb-1">
+        {/* Month labels row */}
+        <div className="relative mb-1 ml-8" style={{ minWidth: "max-content" }}>
+          <div className="h-3" />
+          {monthLabels.map((ml, i) => (
+            <span
+              key={i}
+              className="absolute text-[10px] text-muted-foreground font-medium top-0"
+              style={{
+                left: `${ml.weekIndex * (compact ? 14 : 16)}px`,
+              }}
+            >
+              {ml.month}
+            </span>
+          ))}
+        </div>
+
+        {/* Horizontal heatmap: rows = days of week, columns = weeks */}
+        <div className="flex gap-0" style={{ minWidth: "max-content" }}>
+          {/* Day-of-week labels on the left */}
+          <div className={`flex flex-col ${compact ? "gap-[2px]" : "gap-[3px]"} mr-2 shrink-0`}>
+            {dayLabels.map((label, i) => (
+              <div
+                key={i}
+                className={`${cellSize} flex items-center text-[9px] text-muted-foreground font-medium leading-none`}
+              >
+                {label}
+              </div>
             ))}
           </div>
 
-          {/* Cells */}
+          {/* Week columns */}
           {weeks.map((week, wi) => (
-            <div key={wi} className={`flex ${cellGap}`}>
-              {week.map((day) => {
-                if (day.minutes === -1) {
-                  return <div key={day.date} className={cellSize} />;
+            <div
+              key={wi}
+              className={`flex flex-col ${compact ? "gap-[2px]" : "gap-[3px]"}`}
+            >
+              {Array.from({ length: 7 }, (_, dayIndex) => {
+                const day = week.find((d) => d.dayOfWeek === dayIndex);
+                if (!day || day.minutes === -1) {
+                  return <div key={dayIndex} className={`${cellSize}`} />;
                 }
                 const level = getHeatmapLevel(day.minutes);
                 const isDark =
@@ -141,13 +185,16 @@ export function StudyHeatmap({
                 const colorClass = isDark
                   ? LEVEL_COLORS_DARK[level]
                   : LEVEL_COLORS_LIGHT[level];
-                const dateLabel = new Date(day.date + "T12:00:00").toLocaleDateString(
-                  "en-US",
-                  { month: "short", day: "numeric", year: "numeric" }
-                );
+                const dateLabel = new Date(
+                  day.date + "T12:00:00"
+                ).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                });
 
                 return (
-                  <Tooltip key={day.date}>
+                  <Tooltip key={dayIndex}>
                     <TooltipTrigger
                       className={`${cellSize} rounded-[3px] ${colorClass} heatmap-cell border border-transparent hover:border-foreground/20`}
                       aria-label={`${dateLabel}: ${formatMinutes(day.minutes)}`}

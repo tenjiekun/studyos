@@ -133,6 +133,21 @@ export interface DMMessage {
   profiles?: Profile;
 }
 
+export interface CallLog {
+  id: string;
+  conversation_id: string;
+  caller_id: string;
+  receiver_id: string;
+  call_type: "audio" | "video";
+  status: "completed" | "missed" | "declined";
+  started_at: string;
+  ended_at: string | null;
+  duration_seconds: number | null;
+  created_at: string;
+  caller?: Profile;
+  receiver?: Profile;
+}
+
 export interface Notification {
   id: string;
   user_id: string;

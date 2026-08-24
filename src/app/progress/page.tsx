@@ -124,10 +124,10 @@ export default function ProgressPage() {
   ];
 
   return (
-    <div className="p-4 md:p-8 max-w-[1200px] mx-auto space-y-6">
+    <div className="p-6 md:p-10 max-w-[1200px] mx-auto space-y-8">
       <div className="animate-fade-in">
-        <h1 className="text-2xl font-semibold tracking-tight">Progress</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Track your study consistency over time</p>
+        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Progress</h1>
+        <p className="text-sm text-muted-foreground mt-1.5 font-medium">Track your study consistency over time</p>
       </div>
 
       {!hasData && (
@@ -141,13 +141,13 @@ export default function ProgressPage() {
         </Card>
       )}
 
-      <div className="flex items-center gap-1 animate-fade-in">
+      <div className="flex items-center gap-1 p-1 rounded-2xl bg-muted/50 w-fit animate-fade-in">
         {views.map((v) => (
           <button
             key={v.value}
             onClick={() => setView(v.value)}
-            className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-              view === v.value ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            className={`px-4 py-2 text-[13px] font-medium rounded-xl transition-all duration-200 ${
+              view === v.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {v.label}

@@ -43,7 +43,7 @@ export function NotificationBell() {
   };
 
   return (
-    <div className="relative" ref={panelRef}>
+    <div className="relative flex items-center justify-center" ref={panelRef}>
       {/* Bell button */}
       <Button
         variant="ghost"
@@ -61,7 +61,7 @@ export function NotificationBell() {
 
       {/* Dropdown panel */}
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-[360px] max-h-[480px] rounded-xl border border-border bg-card shadow-2xl z-50 overflow-hidden animate-fade-in">
+        <div className="absolute right-0 top-full mt-2 w-[min(360px,calc(100vw-32px))] max-h-[480px] rounded-xl border border-border bg-card shadow-2xl z-50 overflow-hidden animate-fade-in">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2">

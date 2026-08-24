@@ -18,6 +18,7 @@ import {
 import { useWebRTC } from "@/hooks/use-webrtc";
 import { CallOverlay } from "@/components/call-overlay";
 import { IncomingCall } from "@/components/incoming-call";
+import { CallHistory } from "@/components/call-history";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Profile, DMMessage } from "@/lib/types";
@@ -43,6 +44,8 @@ export default function DMChatPage() {
   const webrtc = useWebRTC({
     conversationId,
     currentUserId: user?.id || "",
+    otherUserId: otherUser?.id || "",
+    otherUserName: otherUser?.name || "Unknown",
   });
 
   // Load messages and other user
@@ -286,7 +289,15 @@ export default function DMChatPage() {
             </p>
           </div>
         ) : (
-          messages.map((msg) => {
+          <>
+          {/* Call History */}
+          {user && (
+            <CallHistory
+              conversationId={conversationId}
+              currentUserId={user.id}
+            />
+          )}
+          {messages.map((msg) => {
             const isMine = msg.sender_id === user?.id;
             return (
               <div
@@ -350,7 +361,8 @@ export default function DMChatPage() {
                 </div>
               </div>
             );
-          })
+          })}
+          </>
         )}
         <div ref={messagesEndRef} />
       </div>
@@ -393,7 +405,7 @@ export default function DMChatPage() {
       )}
 
       {/* Active Call Overlay */}
-      {(webrtc.callState === "connected" || webrtc.callState === "outgoing") && (
+      {(webrtc.callState === "connected" || webrtc.callState === "outgoing" || webrtc.callState === "connecting") && (
         <CallOverlay
           callType={webrtc.callType}
           localStream={webrtc.localStream}
@@ -401,6 +413,7 @@ export default function DMChatPage() {
           otherUserName={otherUser?.name || "Unknown"}
           isMuted={webrtc.isMuted}
           isCameraOff={webrtc.isCameraOff}
+          callDuration={webrtc.callDuration}
           onToggleMute={webrtc.toggleMute}
           onToggleCamera={webrtc.toggleCamera}
           onEndCall={webrtc.endCall}
