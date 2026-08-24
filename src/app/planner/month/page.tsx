@@ -5,10 +5,10 @@ import { useAuth } from "@/components/auth-provider";
 import { useStudyData } from "@/lib/use-study-data";
 import {
   fetchSubjects, fetchChapters, fetchDistributions, fetchYearPlan,
-  updateChapter,
+  updateChapter, deleteChapter,
 } from "@/lib/planner-v2";
 import { getMonthStatus } from "@/lib/planner-v2";
-import { ChevronLeft, ChevronRight, Check, Clock, BookOpen, Target } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, Clock, BookOpen, Target, Pencil, Trash2, MoreHorizontal } from "lucide-react";
 
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
@@ -21,6 +21,8 @@ export default function MonthPage() {
   const [distributions, setDistributions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [editingChapter, setEditingChapter] = useState<any>(null);
+  const [editForm, setEditForm] = useState({ name: "", subject_id: "", estimated_hours: 5, priority: "medium", status: "not_started" });
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -135,6 +137,44 @@ export default function MonthPage() {
           : c
       )
     );
+  };
+
+  // Delete chapter
+  const handleDeleteChapter = async (ch: any) => {
+    await deleteChapter(ch.id);
+    setChapters((prev) => prev.filter((c) => c.id !== ch.id));
+  };
+
+  // Open edit dialog
+  const openEdit = (ch: any) => {
+    setEditingChapter(ch);
+    setEditForm({
+      name: ch.name,
+      subject_id: ch.subject_id,
+      estimated_hours: ch.estimated_hours || 5,
+      priority: ch.priority || "medium",
+      status: ch.status || "not_started",
+    });
+  };
+
+  // Save edit
+  const handleSaveEdit = async () => {
+    if (!editingChapter) return;
+    await updateChapter(editingChapter.id, {
+      name: editForm.name,
+      subject_id: editForm.subject_id,
+      estimated_hours: editForm.estimated_hours,
+      priority: editForm.priority,
+      status: editForm.status,
+    });
+    setChapters((prev) =>
+      prev.map((c) =>
+        c.id === editingChapter.id
+          ? { ...c, name: editForm.name, subject_id: editForm.subject_id, estimated_hours: editForm.estimated_hours, priority: editForm.priority, status: editForm.status }
+          : c
+      )
+    );
+    setEditingChapter(null);
   };
 
   const navigateMonth = (offset: number) => {
@@ -301,10 +341,16 @@ export default function MonthPage() {
                             </span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           {isCompleted && (
-                            <span className="text-[10px] text-emerald-500 font-medium">Done</span>
+                            <span className="text-[10px] text-emerald-500 font-medium mr-1">Done</span>
                           )}
+                          <button onClick={(e) => { e.stopPropagation(); openEdit(ch); }} className="w-7 h-7 rounded-lg text-muted-foreground/60 hover:bg-muted hover:text-foreground transition-all flex items-center justify-center" title="Edit chapter">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); if(confirm(`Delete \"${ch.name}\"?`)) handleDeleteChapter(ch); }} className="w-7 h-7 rounded-lg text-muted-foreground/60 hover:bg-destructive/10 hover:text-destructive transition-all flex items-center justify-center" title="Delete chapter">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
                     );
@@ -313,6 +359,62 @@ export default function MonthPage() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ===== EDIT CHAPTER MODAL ===== */}
+      {editingChapter && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" onClick={() => setEditingChapter(null)} />
+          <div className="relative w-full max-w-md mx-4 bg-card border border-border/50 rounded-3xl p-8 shadow-xl">
+            <h2 className="text-lg font-medium mb-6">Edit Chapter</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground mb-1.5 block">Chapter Name</label>
+                <input type="text" value={editForm.name} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))}
+                  className="w-full h-11 px-4 rounded-xl bg-background border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all" />
+              </div>
+              <div>
+                <label className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground mb-1.5 block">Subject</label>
+                <select value={editForm.subject_id} onChange={(e) => setEditForm((p) => ({ ...p, subject_id: e.target.value }))}
+                  className="w-full h-11 px-4 rounded-xl bg-background border border-border/50 text-sm focus:outline-none cursor-pointer">
+                  {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground mb-1.5 block">Estimated Hours</label>
+                  <input type="number" value={editForm.estimated_hours} onChange={(e) => setEditForm((p) => ({ ...p, estimated_hours: Number(e.target.value) }))} min={1} max={100}
+                    className="w-full h-11 px-4 rounded-xl bg-background border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground mb-1.5 block">Priority</label>
+                  <select value={editForm.priority} onChange={(e) => setEditForm((p) => ({ ...p, priority: e.target.value }))}
+                    className="w-full h-11 px-4 rounded-xl bg-background border border-border/50 text-sm focus:outline-none cursor-pointer">
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground mb-1.5 block">Status</label>
+                <select value={editForm.status} onChange={(e) => setEditForm((p) => ({ ...p, status: e.target.value }))}
+                  className="w-full h-11 px-4 rounded-xl bg-background border border-border/50 text-sm focus:outline-none cursor-pointer">
+                  <option value="not_started">Not Started</option>
+                  <option value="planned">Planned</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="revising">Revising</option>
+                  <option value="needs_revision">Needs Revision</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-8">
+              <button onClick={() => setEditingChapter(null)} className="flex-1 h-11 rounded-xl bg-muted text-sm font-medium text-muted-foreground hover:bg-muted/80 transition-colors">Cancel</button>
+              <button onClick={handleSaveEdit} className="flex-1 h-11 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all active:scale-[0.97]">Save</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
