@@ -15,7 +15,7 @@ import {
 import { parseSyllabusText, ParsedSubject } from "@/lib/syllabus-parser";
 import { Plus, Target, BookOpen, Clock, ChevronRight, ChevronLeft, Upload, Settings, Trash2, GripVertical, Check, AlertTriangle, RefreshCw } from "lucide-react";
 
-type Tab = "overview" | "syllabus" | "months";
+type Tab = "overview" | "syllabus";
 
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
@@ -284,10 +284,10 @@ export default function YearPlanPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 p-1 rounded-xl bg-muted/50 w-fit">
-        {(["overview", "syllabus", "months"] as const).map((t) => (
+        {(["overview", "syllabus"] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${tab === t ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            {t === "overview" ? "Overview" : t === "syllabus" ? "Syllabus" : "Monthly View"}
+            {t === "overview" ? "Overview" : "Syllabus"}
           </button>
         ))}
       </div>
@@ -417,54 +417,7 @@ export default function YearPlanPage() {
       )}
 
       {/* ===== DISTRIBUTE TAB ===== */}
-      {/* ===== MONTHS TAB ===== */}
-      {tab === "months" && (
-        <div className="space-y-4">
-          {distributions.length === 0 ? (
-            <div className="text-center py-12 rounded-2xl bg-card border border-border/30">
-              <p className="text-sm text-muted-foreground">No distribution yet</p>
-              <p className="text-xs text-muted-foreground/60 mt-1">Distributions will appear here once created</p>
-            </div>
-          ) : (
-            months.map((month) => {
-              const monthDists = distributions.filter((d) => d.month === month);
-              const totalHours = monthDists.reduce((a, d) => a + (d.planned_hours || 0), 0);
-              const totalChapters = monthDists.reduce((a, d) => a + (d.planned_chapters || 0), 0);
-              const isCurrent = month === currentMonth;
-              const isPast = month < currentMonth;
-              const monthName = MONTH_NAMES[new Date(month + "-15").getMonth()];
 
-              return (
-                <div key={month} className={`rounded-2xl border transition-all ${isCurrent ? "border-primary/30 bg-primary/5" : isPast ? "border-border/20 bg-card/50 opacity-70" : "border-border/30 bg-card"}`}>
-                  <div className="flex items-center justify-between p-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-full ${isCurrent ? "bg-primary animate-pulse" : isPast ? "bg-muted-foreground/30" : "bg-muted-foreground/50"}`} />
-                      <div>
-                        <p className={`text-sm font-medium ${isCurrent ? "text-primary" : ""}`}>{monthName} {month.slice(0, 4)}</p>
-                        <p className="text-[11px] text-muted-foreground">{totalChapters} chapters · {totalHours}h planned</p>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                  {/* Subject breakdown within month */}
-                  <div className="px-4 pb-3 space-y-1">
-                    {monthDists.filter((d) => d.planned_chapters > 0).map((d) => {
-                      const sub = subjects.find((s) => s.id === d.subject_id);
-                      return (
-                        <div key={d.id} className="flex items-center gap-2 text-[11px]">
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: sub?.color || "#6366f1" }} />
-                          <span className="text-muted-foreground">{sub?.name || "—"}</span>
-                          <span className="text-foreground">{d.planned_chapters} ch · {d.planned_hours}h</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      )}
 
       {/* ===== IMPORT SYLLABUS MODAL ===== */}
       {showImportReview && (
