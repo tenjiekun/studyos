@@ -433,9 +433,9 @@ export interface Database {
         Relationships: [];
       };
       year_plans: {
-        Row: { id: string; user_id: string; title: string; academic_year: string; status: string; created_at: string; updated_at: string };
-        Insert: { id?: string; user_id: string; title: string; academic_year?: string; status?: string; created_at?: string; updated_at?: string };
-        Update: { id?: string; user_id?: string; title?: string; academic_year?: string; status?: string; created_at?: string; updated_at?: string };
+        Row: { id: string; user_id: string; title: string; academic_year: string; start_date: string; end_date: string; daily_study_hours: number; weekly_study_days: number; buffer_pct: number; total_available_hours: number; total_planned_hours: number; status: string; locked: boolean; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; title: string; academic_year?: string; start_date?: string; end_date?: string; daily_study_hours?: number; weekly_study_days?: number; buffer_pct?: number; total_available_hours?: number; total_planned_hours?: number; status?: string; locked?: boolean; created_at?: string; updated_at?: string };
+        Update: { id?: string; user_id?: string; title?: string; academic_year?: string; start_date?: string; end_date?: string; daily_study_hours?: number; weekly_study_days?: number; buffer_pct?: number; total_available_hours?: number; total_planned_hours?: number; status?: string; locked?: boolean; created_at?: string; updated_at?: string };
         Relationships: [];
       };
       plan_goals: {
@@ -496,6 +496,54 @@ export interface Database {
         Row: { id: string; user_id: string; year: string | null; month: string; planned_study_hours: number; planned_tasks: number; planned_chapters: number; planned_mocks: number; planned_revisions: number; notes: string | null; created_at: string; updated_at: string };
         Insert: { id?: string; user_id: string; year?: string | null; month: string; planned_study_hours?: number; planned_tasks?: number; planned_chapters?: number; planned_mocks?: number; planned_revisions?: number; notes?: string | null; created_at?: string; updated_at?: string };
         Update: { id?: string; user_id?: string; year?: string | null; month?: string; planned_study_hours?: number; planned_tasks?: number; planned_chapters?: number; planned_mocks?: number; planned_revisions?: number; notes?: string | null; created_at?: string; updated_at?: string };
+        Relationships: [];
+      };
+      subjects: {
+        Row: { id: string; user_id: string; name: string; color: string; priority: string; target_completion_date: string | null; weekly_target_hours: number; allocation_pct: number; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; name: string; color?: string; priority?: string; target_completion_date?: string | null; weekly_target_hours?: number; allocation_pct?: number; created_at?: string; updated_at?: string };
+        Update: { id?: string; user_id?: string; name?: string; color?: string; priority?: string; target_completion_date?: string | null; weekly_target_hours?: number; allocation_pct?: number; created_at?: string; updated_at?: string };
+        Relationships: [];
+      };
+      syllabus_chapters: {
+        Row: { id: string; user_id: string; subject_id: string; name: string; topics: string[] | null; status: string; priority: string; estimated_hours: number; actual_hours: number; target_date: string | null; completed_at: string | null; revision_count: number; sort_order: number; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; subject_id: string; name: string; topics?: string[] | null; status?: string; priority?: string; estimated_hours?: number; actual_hours?: number; target_date?: string | null; completed_at?: string | null; revision_count?: number; sort_order?: number; created_at?: string; updated_at?: string };
+        Update: { id?: string; user_id?: string; subject_id?: string; name?: string; topics?: string[] | null; status?: string; priority?: string; estimated_hours?: number; actual_hours?: number; target_date?: string | null; completed_at?: string | null; revision_count?: number; sort_order?: number; created_at?: string; updated_at?: string };
+        Relationships: [{ foreignKeyName: "syllabus_chapters_subject_id_fkey"; columns: ["subject_id"]; isOneToOne: false; referencedRelation: "subjects"; referencedColumns: ["id"] }];
+      };
+      plan_distributions: {
+        Row: { id: string; user_id: string; year_plan_id: string; subject_id: string; month: string; planned_hours: number; planned_chapters: number; actual_hours: number; actual_chapters: number; locked: boolean; created_at: string };
+        Insert: { id?: string; user_id: string; year_plan_id: string; subject_id: string; month: string; planned_hours?: number; planned_chapters?: number; actual_hours?: number; actual_chapters?: number; locked?: boolean; created_at?: string };
+        Update: { id?: string; user_id?: string; year_plan_id?: string; subject_id?: string; month?: string; planned_hours?: number; planned_chapters?: number; actual_hours?: number; actual_chapters?: number; locked?: boolean; created_at?: string };
+        Relationships: [];
+      };
+      chapter_assignments: {
+        Row: { id: string; user_id: string; chapter_id: string; year_plan_id: string | null; assigned_month: string | null; assigned_week: string | null; assigned_date: string | null; estimated_start: string | null; estimated_end: string | null; locked: boolean; sort_order: number; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; chapter_id: string; year_plan_id?: string | null; assigned_month?: string | null; assigned_week?: string | null; assigned_date?: string | null; estimated_start?: string | null; estimated_end?: string | null; locked?: boolean; sort_order?: number; created_at?: string; updated_at?: string };
+        Update: { id?: string; user_id?: string; chapter_id?: string; year_plan_id?: string | null; assigned_month?: string | null; assigned_week?: string | null; assigned_date?: string | null; estimated_start?: string | null; estimated_end?: string | null; locked?: boolean; sort_order?: number; created_at?: string; updated_at?: string };
+        Relationships: [];
+      };
+      weekly_plans: {
+        Row: { id: string; user_id: string; year_plan_id: string | null; week_start: string; week_end: string; planned_hours: number; actual_hours: number; planned_chapters: number; actual_chapters: number; status: string; locked: boolean; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; year_plan_id?: string | null; week_start: string; week_end: string; planned_hours?: number; actual_hours?: number; planned_chapters?: number; actual_chapters?: number; status?: string; locked?: boolean; created_at?: string; updated_at?: string };
+        Update: { id?: string; user_id?: string; year_plan_id?: string | null; week_start?: string; week_end?: string; planned_hours?: number; actual_hours?: number; planned_chapters?: number; actual_chapters?: number; status?: string; locked?: boolean; created_at?: string; updated_at?: string };
+        Relationships: [];
+      };
+      daily_plans: {
+        Row: { id: string; user_id: string; date: string; planned_hours: number; actual_hours: number; focus_minutes: number; productivity_score: number; status: string; locked: boolean; notes: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; date: string; planned_hours?: number; actual_hours?: number; focus_minutes?: number; productivity_score?: number; status?: string; locked?: boolean; notes?: string | null; created_at?: string; updated_at?: string };
+        Update: { id?: string; user_id?: string; date?: string; planned_hours?: number; actual_hours?: number; focus_minutes?: number; productivity_score?: number; status?: string; locked?: boolean; notes?: string | null; created_at?: string; updated_at?: string };
+        Relationships: [];
+      };
+      daily_plan_blocks: {
+        Row: { id: string; user_id: string; daily_plan_id: string | null; chapter_id: string | null; subject_id: string | null; title: string; start_time: string; end_time: string; type: string; completed: boolean; actual_minutes: number | null; locked: boolean; sort_order: number; created_at: string };
+        Insert: { id?: string; user_id: string; daily_plan_id?: string | null; chapter_id?: string | null; subject_id?: string | null; title: string; start_time: string; end_time: string; type?: string; completed?: boolean; actual_minutes?: number | null; locked?: boolean; sort_order?: number; created_at?: string };
+        Update: { id?: string; user_id?: string; daily_plan_id?: string | null; chapter_id?: string | null; subject_id?: string | null; title?: string; start_time?: string; end_time?: string; type?: string; completed?: boolean; actual_minutes?: number | null; locked?: boolean; sort_order?: number; created_at?: string };
+        Relationships: [];
+      };
+      replan_logs: {
+        Row: { id: string; user_id: string; year_plan_id: string | null; reason: string | null; chapters_behind: number; hours_behind: number; changes_made: any; created_at: string };
+        Insert: { id?: string; user_id: string; year_plan_id?: string | null; reason?: string | null; chapters_behind?: number; hours_behind?: number; changes_made?: any; created_at?: string };
+        Update: { id?: string; user_id?: string; year_plan_id?: string | null; reason?: string | null; chapters_behind?: number; hours_behind?: number; changes_made?: any; created_at?: string };
         Relationships: [];
       };
     };

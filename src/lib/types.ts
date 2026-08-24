@@ -189,7 +189,15 @@ export interface YearPlan {
   user_id: string;
   title: string;
   academic_year: string;
-  status: "active" | "completed" | "archived";
+  start_date: string;
+  end_date: string;
+  daily_study_hours: number;
+  weekly_study_days: number;
+  buffer_pct: number;
+  total_available_hours: number;
+  total_planned_hours: number;
+  status: "draft" | "active" | "completed" | "archived";
+  locked: boolean;
   created_at: string;
   updated_at: string;
 }
