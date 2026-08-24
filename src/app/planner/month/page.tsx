@@ -5,15 +5,16 @@ import { useAuth } from "@/components/auth-provider";
 import { useStudyData } from "@/lib/use-study-data";
 import {
   fetchSubjects, fetchChapters, fetchDistributions, fetchYearPlan,
+  updateChapter,
 } from "@/lib/planner-v2";
-import { calculateSyllabusStats, getMonthStatus } from "@/lib/planner-v2";
-import { Plus, ChevronLeft, ChevronRight, Target, BookOpen, Clock, Check } from "lucide-react";
+import { getMonthStatus } from "@/lib/planner-v2";
+import { ChevronLeft, ChevronRight, Check, Clock, BookOpen, Target } from "lucide-react";
 
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 export default function MonthPage() {
   const { user } = useAuth();
-  const { sessions, tasks } = useStudyData();
+  const { sessions } = useStudyData();
   const [currentMonth, setCurrentMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [subjects, setSubjects] = useState<any[]>([]);
   const [chapters, setChapters] = useState<any[]>([]);
@@ -29,8 +30,6 @@ export default function MonthPage() {
     ]);
     setSubjects(subjs);
     setChapters(chaps);
-
-    // Try to load distributions from any active year plan
     const yp = await fetchYearPlan(user.id);
     if (yp) {
       const dists = await fetchDistributions(yp.id);
@@ -46,34 +45,100 @@ export default function MonthPage() {
     return <div className="space-y-4"><div className="skeleton h-8 w-48" /><div className="skeleton h-[300px] rounded-2xl" /></div>;
   }
 
-  const monthLabel = MONTH_NAMES[parseInt(currentMonth.split("-")[1]) - 1] + " " + currentMonth.split("-")[0];
+  const monthNum = parseInt(currentMonth.split("-")[1]);
+  const year = parseInt(currentMonth.split("-")[0]);
+  const monthLabel = MONTH_NAMES[monthNum - 1] + " " + year;
 
-  // Filter distributions for this month
+  // Get distributions for this month
   const monthDists = distributions.filter((d) => d.month === currentMonth);
-  const totalPlannedHours = monthDists.reduce((a, d) => a + (d.planned_hours || 0), 0);
+
+  // Get the month's total planned chapters and hours
   const totalPlannedChapters = monthDists.reduce((a, d) => a + (d.planned_chapters || 0), 0);
-  const totalActualHours = monthDists.reduce((a, d) => a + (d.actual_hours || 0), 0);
-  const totalActualChapters = monthDists.reduce((a, d) => a + (d.actual_chapters || 0), 0);
+  const totalPlannedHours = monthDists.reduce((a, d) => a + (d.planned_hours || 0), 0);
 
-  // Actual study sessions this month
+  // Get all chapters that belong to subjects in this month's distribution
+  const monthSubjectIds = monthDists.map((d) => d.subject_id);
+
+  // Distribute chapters across 4 weeks of the month
+  // Get all chapters for the subjects in this month's plan, sorted by sort_order
+  const monthChapters = chapters
+    .filter((c) => monthSubjectIds.includes(c.subject_id))
+    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
+  // Calculate which chapters go to which week based on estimated hours
+  const weeksInMonth = 4;
+  const hoursPerWeek = weeksInMonth > 0 ? totalPlannedHours / weeksInMonth : 0;
+
+  // Build weekly assignments
+  const weekAssignments: Array<{
+    week: number;
+    label: string;
+    chapters: any[];
+    plannedHours: number;
+  }> = [];
+
+  let currentWeekHours = 0;
+  let currentWeekChapters: any[] = [];
+  let weekNum = 0;
+
+  // Get days in month for week labels
+  const daysInMonth = new Date(year, monthNum, 0).getDate();
+
+  for (let w = 0; w < weeksInMonth; w++) {
+    const weekStart = w * 7 + 1;
+    const weekEnd = Math.min((w + 1) * 7, daysInMonth);
+    weekAssignments.push({
+      week: w + 1,
+      label: `${MONTH_NAMES[monthNum - 1].slice(0, 3)} ${weekStart}–${weekEnd}`,
+      chapters: [],
+      plannedHours: 0,
+    });
+  }
+
+  // Distribute chapters to weeks based on estimated hours
+  let weekIdx = 0;
+  let weekUsedHours = 0;
+  monthChapters.forEach((ch) => {
+    if (weekIdx >= weeksInMonth) weekIdx = weeksInMonth - 1;
+    const chHours = ch.estimated_hours || 5;
+
+    // If this chapter would exceed the week's capacity, move to next week
+    if (weekUsedHours + chHours > hoursPerWeek * 1.3 && weekIdx < weeksInMonth - 1) {
+      weekIdx++;
+      weekUsedHours = 0;
+    }
+
+    weekAssignments[weekIdx].chapters.push(ch);
+    weekAssignments[weekIdx].plannedHours += chHours;
+    weekUsedHours += chHours;
+  });
+
+  // Actual sessions this month
   const monthSessions = sessions.filter((s) => s.start_time?.slice(0, 7) === currentMonth);
-  const actualStudyMinutes = monthSessions.reduce((a, s) => a + (s.duration_minutes || 0), 0);
-  const actualStudyHours = Math.round(actualStudyMinutes / 60 * 10) / 10;
+  const actualStudyHours = Math.round(monthSessions.reduce((a, s) => a + (s.duration_minutes || 0), 0) / 60 * 10) / 10;
 
-  // Tasks this month
-  const monthTasks = tasks.filter((t) => t.scheduled_date?.slice(0, 7) === currentMonth);
-  const completedTasks = monthTasks.filter((t) => t.completed).length;
+  // Count completed chapters
+  const completedChapters = monthChapters.filter((c) => c.status === "completed").length;
+  const completionPct = monthChapters.length > 0 ? Math.round((completedChapters / monthChapters.length) * 100) : 0;
 
-  // Progress
-  const completionPct = totalPlannedChapters > 0 ? Math.round((totalActualChapters / totalPlannedChapters) * 100) : 0;
-  const hourPct = totalPlannedHours > 0 ? Math.round((actualStudyHours / totalPlannedHours) * 100) : 0;
-
-  const isCurrentMonth = currentMonth === new Date().toISOString().slice(0, 7);
-  const isPast = currentMonth < new Date().toISOString().slice(0, 7);
+  // Toggle chapter completion
+  const handleToggleChapter = async (ch: any) => {
+    const newStatus = ch.status === "completed" ? "not_started" : "completed";
+    await updateChapter(ch.id, {
+      status: newStatus,
+      completed_at: newStatus === "completed" ? new Date().toISOString() : null,
+    });
+    setChapters((prev) =>
+      prev.map((c) =>
+        c.id === ch.id
+          ? { ...c, status: newStatus, completed_at: newStatus === "completed" ? new Date().toISOString() : null }
+          : c
+      )
+    );
+  };
 
   const navigateMonth = (offset: number) => {
-    const d = new Date(currentMonth + "-15");
-    d.setMonth(d.getMonth() + offset);
+    const d = new Date(year, monthNum - 1 + offset, 15);
     setCurrentMonth(d.toISOString().slice(0, 7));
   };
 
@@ -98,8 +163,13 @@ export default function MonthPage() {
         </div>
       </div>
 
-      {/* Stats Row */}
+      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="p-5 rounded-2xl bg-card border border-border/30">
+          <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground mb-2">CHAPTERS</p>
+          <p className="text-3xl font-light">{completedChapters}/{monthChapters.length}</p>
+          <p className="text-xs text-muted-foreground mt-1">{completionPct}% complete</p>
+        </div>
         <div className="p-5 rounded-2xl bg-card border border-border/30">
           <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground mb-2">PLANNED</p>
           <p className="text-3xl font-light">{totalPlannedHours}h</p>
@@ -111,92 +181,138 @@ export default function MonthPage() {
           <p className="text-xs text-muted-foreground mt-1">{monthSessions.length} sessions</p>
         </div>
         <div className="p-5 rounded-2xl bg-card border border-border/30">
-          <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground mb-2">CHAPTERS</p>
-          <p className="text-3xl font-light">{totalActualChapters}/{totalPlannedChapters}</p>
-          <p className="text-xs text-muted-foreground mt-1">{completionPct}% complete</p>
-        </div>
-        <div className="p-5 rounded-2xl bg-card border border-border/30">
-          <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground mb-2">TASKS</p>
-          <p className="text-3xl font-light">{completedTasks}/{monthTasks.length}</p>
-          <p className="text-xs text-muted-foreground mt-1">completed</p>
+          <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground mb-2">STATUS</p>
+          <p className="text-3xl font-light">
+            {completionPct >= 90 ? "🎉" : completionPct >= 50 ? "📊" : completionPct > 0 ? "📝" : "📋"}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {completionPct >= 90 ? "Almost done!" : completionPct >= 50 ? "On track" : completionPct > 0 ? "In progress" : "Not started"}
+          </p>
         </div>
       </div>
 
-      {/* Progress Bar */}
-      {totalPlannedHours > 0 && (
+      {/* Overall Progress */}
+      {monthChapters.length > 0 && (
         <div className="p-4 rounded-2xl bg-card border border-border/30">
           <div className="flex items-center justify-between mb-2">
             <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground">Month Progress</p>
-            <p className="text-sm font-medium">{hourPct}%</p>
+            <p className="text-sm font-medium">{completionPct}%</p>
           </div>
           <div className="h-2 rounded-full bg-muted overflow-hidden">
-            <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${Math.min(hourPct, 100)}%` }} />
-          </div>
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-xs text-muted-foreground">{actualStudyHours}h studied</span>
-            <span className="text-xs text-muted-foreground">{totalPlannedHours}h planned</span>
+            <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${completionPct}%` }} />
           </div>
         </div>
       )}
 
-      {/* No distribution message */}
-      {monthDists.length === 0 && (
+      {/* No distribution */}
+      {monthChapters.length === 0 && (
         <div className="text-center py-12 rounded-2xl bg-card border border-border/30">
           <BookOpen className="w-8 h-8 text-muted-foreground/20 mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">No plan for this month</p>
+          <p className="text-sm text-muted-foreground">No chapters planned for this month</p>
           <p className="text-xs text-muted-foreground/60 mt-1">Go to Year Plan → Distribute to generate monthly plans</p>
         </div>
       )}
 
-      {/* Subject Breakdown */}
-      {monthDists.length > 0 && (
-        <div className="space-y-3">
-          <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground">Subject Breakdown</p>
-          {monthDists.map((d) => {
-            const sub = subjects.find((s) => s.id === d.subject_id);
-            if (!sub) return null;
-            const subChapters = chapters.filter((c) => c.subject_id === d.subject_id);
-            const subCompleted = subChapters.filter((c) => c.status === "completed").length;
-            const subPct = subChapters.length > 0 ? Math.round((subCompleted / subChapters.length) * 100) : 0;
+      {/* ===== WEEKLY BREAKDOWN ===== */}
+      {monthChapters.length > 0 && (
+        <div className="space-y-6">
+          <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground">Weekly Breakdown</p>
 
-            return (
-              <div key={d.id} className="p-5 rounded-2xl bg-card border border-border/30">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: sub.color || "#6366f1" }} />
-                  <p className="text-sm font-medium flex-1">{sub.name}</p>
-                  <p className="text-sm text-muted-foreground">{d.planned_hours}h planned · {d.planned_chapters} chapters</p>
+          {weekAssignments.map((week) => (
+            <div key={week.week} className="rounded-2xl bg-card border border-border/30 overflow-hidden">
+              {/* Week Header */}
+              <div className="flex items-center justify-between p-4 border-b border-border/20">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-medium ${
+                    week.chapters.some((c: any) => c.status === "completed")
+                      ? "bg-primary/10 text-primary"
+                      : "bg-muted text-muted-foreground"
+                  }`}>
+                    W{week.week}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Week {week.week}</p>
+                    <p className="text-[11px] text-muted-foreground">{week.label}</p>
+                  </div>
                 </div>
-                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${subPct}%`, backgroundColor: sub.color || "#6366f1" }} />
-                </div>
-                <div className="flex items-center gap-4 mt-2">
-                  <span className="text-[11px] text-muted-foreground">{subCompleted}/{subChapters.length} chapters done</span>
-                  <span className="text-[11px] text-muted-foreground">{subPct}%</span>
+                <div className="text-right">
+                  <p className="text-sm font-medium">{week.chapters.length} chapters</p>
+                  <p className="text-[11px] text-muted-foreground">{Math.round(week.plannedHours)}h planned</p>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      )}
 
-      {/* Recent Study Sessions */}
-      {monthSessions.length > 0 && (
-        <div className="space-y-3">
-          <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground">Recent Sessions</p>
-          <div className="space-y-1.5">
-            {monthSessions.slice(0, 5).map((s) => (
-              <div key={s.id} className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border/30">
-                <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{s.subject || "Study Session"}</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {new Date(s.start_time).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  </p>
+              {/* Week Progress */}
+              <div className="px-4 pt-3">
+                <div className="h-1 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-primary/60 transition-all duration-500"
+                    style={{
+                      width: week.chapters.length > 0
+                        ? `${Math.round((week.chapters.filter((c: any) => c.status === "completed").length / week.chapters.length) * 100)}%`
+                        : "0%"
+                    }}
+                  />
                 </div>
-                <p className="text-sm text-muted-foreground">{s.duration_minutes}m</p>
               </div>
-            ))}
-          </div>
+
+              {/* Chapters */}
+              {week.chapters.length === 0 ? (
+                <div className="p-4 text-center">
+                  <p className="text-xs text-muted-foreground">No chapters assigned</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-border/10">
+                  {week.chapters.map((ch: any) => {
+                    const sub = subjects.find((s) => s.id === ch.subject_id);
+                    const isCompleted = ch.status === "completed";
+                    return (
+                      <div
+                        key={ch.id}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors group"
+                      >
+                        <button
+                          onClick={() => handleToggleChapter(ch)}
+                          className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
+                            isCompleted
+                              ? "bg-emerald-500 border-emerald-500 text-white"
+                              : "border-border/50 hover:border-primary/40"
+                          }`}
+                        >
+                          {isCompleted && <Check className="w-3 h-3" />}
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm ${isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                            {ch.name}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {sub && (
+                              <span
+                                className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                                style={{
+                                  backgroundColor: (sub.color || "#6366f1") + "15",
+                                  color: sub.color || "#6366f1",
+                                }}
+                              >
+                                {sub.name}
+                              </span>
+                            )}
+                            <span className="text-[11px] text-muted-foreground">
+                              {ch.estimated_hours || 5}h
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {isCompleted && (
+                            <span className="text-[10px] text-emerald-500 font-medium">Done</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>
