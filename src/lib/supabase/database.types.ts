@@ -432,6 +432,72 @@ export interface Database {
         };
         Relationships: [];
       };
+      year_plans: {
+        Row: { id: string; user_id: string; title: string; academic_year: string; status: string; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; title: string; academic_year?: string; status?: string; created_at?: string; updated_at?: string };
+        Update: { id?: string; user_id?: string; title?: string; academic_year?: string; status?: string; created_at?: string; updated_at?: string };
+        Relationships: [];
+      };
+      plan_goals: {
+        Row: { id: string; user_id: string; plan_id: string | null; period: string; period_date: string | null; title: string; description: string | null; subject: string | null; target_date: string | null; priority: string; status: string; progress: number; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; plan_id?: string | null; period?: string; period_date?: string | null; title: string; description?: string | null; subject?: string | null; target_date?: string | null; priority?: string; status?: string; progress?: number; created_at?: string; updated_at?: string };
+        Update: { id?: string; user_id?: string; plan_id?: string | null; period?: string; period_date?: string | null; title?: string; description?: string | null; subject?: string | null; target_date?: string | null; priority?: string; status?: string; progress?: number; created_at?: string; updated_at?: string };
+        Relationships: [];
+      };
+      syllabus_items: {
+        Row: { id: string; user_id: string; subject: string; chapter: string; topic: string | null; subtopic: string | null; status: string; planned_date: string | null; completed_at: string | null; estimated_minutes: number; actual_minutes: number; revision_count: number; priority: string; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; subject: string; chapter: string; topic?: string | null; subtopic?: string | null; status?: string; planned_date?: string | null; completed_at?: string | null; estimated_minutes?: number; actual_minutes?: number; revision_count?: number; priority?: string; created_at?: string; updated_at?: string };
+        Update: { id?: string; user_id?: string; subject?: string; chapter?: string; topic?: string | null; subtopic?: string | null; status?: string; planned_date?: string | null; completed_at?: string | null; estimated_minutes?: number; actual_minutes?: number; revision_count?: number; priority?: string; created_at?: string; updated_at?: string };
+        Relationships: [];
+      };
+      scheduled_blocks: {
+        Row: { id: string; user_id: string; type: string; title: string; subject: string | null; start_time: string; end_time: string; task_id: string | null; syllabus_item_id: string | null; test_id: string | null; status: string; actual_minutes: number | null; notes: string | null; google_event_id: string | null; recurrence: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; type?: string; title: string; subject?: string | null; start_time: string; end_time: string; task_id?: string | null; syllabus_item_id?: string | null; test_id?: string | null; status?: string; actual_minutes?: number | null; notes?: string | null; google_event_id?: string | null; recurrence?: string | null; created_at?: string; updated_at?: string };
+        Update: { id?: string; user_id?: string; type?: string; title?: string; subject?: string | null; start_time?: string; end_time?: string; task_id?: string | null; syllabus_item_id?: string | null; test_id?: string | null; status?: string; actual_minutes?: number | null; notes?: string | null; google_event_id?: string | null; recurrence?: string | null; created_at?: string; updated_at?: string };
+        Relationships: [];
+      };
+      tests: {
+        Row: { id: string; user_id: string; name: string; type: string; category: string; date: string; start_time: string | null; duration_minutes: number; subjects: string[]; syllabus_covered: string | null; max_marks: number; target_marks: number | null; actual_marks: number | null; percentage: number | null; rank: number | null; accuracy: number | null; questions_attempted: number | null; correct_answers: number | null; incorrect_answers: number | null; unattempted: number | null; time_taken_minutes: number | null; notes: string | null; google_event_id: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; name: string; type?: string; category?: string; date: string; start_time?: string | null; duration_minutes?: number; subjects?: string[]; syllabus_covered?: string | null; max_marks?: number; target_marks?: number | null; actual_marks?: number | null; percentage?: number | null; rank?: number | null; accuracy?: number | null; questions_attempted?: number | null; correct_answers?: number | null; incorrect_answers?: number | null; unattempted?: number | null; time_taken_minutes?: number | null; notes?: string | null; google_event_id?: string | null; created_at?: string; updated_at?: string };
+        Update: { id?: string; user_id?: string; name?: string; type?: string; category?: string; date?: string; start_time?: string | null; duration_minutes?: number; subjects?: string[]; syllabus_covered?: string | null; max_marks?: number; target_marks?: number | null; actual_marks?: number | null; percentage?: number | null; rank?: number | null; accuracy?: number | null; questions_attempted?: number | null; correct_answers?: number | null; incorrect_answers?: number | null; unattempted?: number | null; time_taken_minutes?: number | null; notes?: string | null; google_event_id?: string | null; created_at?: string; updated_at?: string };
+        Relationships: [];
+      };
+      test_subject_results: {
+        Row: { id: string; test_id: string; subject: string; marks: number | null; max_marks: number | null; accuracy: number | null; questions_attempted: number | null; correct_answers: number | null; created_at: string };
+        Insert: { id?: string; test_id: string; subject: string; marks?: number | null; max_marks?: number | null; accuracy?: number | null; questions_attempted?: number | null; correct_answers?: number | null; created_at?: string };
+        Update: { id?: string; test_id?: string; subject?: string; marks?: number | null; max_marks?: number | null; accuracy?: number | null; questions_attempted?: number | null; correct_answers?: number | null; created_at?: string };
+        Relationships: [];
+      };
+      free_time_logs: {
+        Row: { id: string; user_id: string; date: string; category: string; start_time: string | null; end_time: string | null; duration_minutes: number; notes: string | null; created_at: string };
+        Insert: { id?: string; user_id: string; date: string; category?: string; start_time?: string | null; end_time?: string | null; duration_minutes?: number; notes?: string | null; created_at?: string };
+        Update: { id?: string; user_id?: string; date?: string; category?: string; start_time?: string | null; end_time?: string | null; duration_minutes?: number; notes?: string | null; created_at?: string };
+        Relationships: [];
+      };
+      daily_schedules: {
+        Row: { id: string; user_id: string; day_of_week: number | null; wake_time: string | null; sleep_time: string | null; school_start: string | null; school_end: string | null; coaching_start: string | null; coaching_end: string | null; max_study_hours: number; notes: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; day_of_week?: number | null; wake_time?: string | null; sleep_time?: string | null; school_start?: string | null; school_end?: string | null; coaching_start?: string | null; coaching_end?: string | null; max_study_hours?: number; notes?: string | null; created_at?: string; updated_at?: string };
+        Update: { id?: string; user_id?: string; day_of_week?: number | null; wake_time?: string | null; sleep_time?: string | null; school_start?: string | null; school_end?: string | null; coaching_start?: string | null; coaching_end?: string | null; max_study_hours?: number; notes?: string | null; created_at?: string; updated_at?: string };
+        Relationships: [];
+      };
+      google_calendar_connections: {
+        Row: { id: string; user_id: string; google_account_email: string | null; sync_enabled: boolean; sync_study_events: boolean; sync_test_events: boolean; last_synced_at: string | null; access_token_encrypted: string | null; refresh_token_encrypted: string | null; token_expires_at: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; google_account_email?: string | null; sync_enabled?: boolean; sync_study_events?: boolean; sync_test_events?: boolean; last_synced_at?: string | null; access_token_encrypted?: string | null; refresh_token_encrypted?: string | null; token_expires_at?: string | null; created_at?: string; updated_at?: string };
+        Update: { id?: string; user_id?: string; google_account_email?: string | null; sync_enabled?: boolean; sync_study_events?: boolean; sync_test_events?: boolean; last_synced_at?: string | null; access_token_encrypted?: string | null; refresh_token_encrypted?: string | null; token_expires_at?: string | null; created_at?: string; updated_at?: string };
+        Relationships: [];
+      };
+      calendar_event_mappings: {
+        Row: { id: string; user_id: string; local_record_id: string; local_record_type: string; google_calendar_id: string | null; google_event_id: string; last_synced_at: string; sync_status: string; sync_direction: string; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; local_record_id: string; local_record_type: string; google_calendar_id?: string | null; google_event_id: string; last_synced_at?: string; sync_status?: string; sync_direction?: string; created_at?: string; updated_at?: string };
+        Update: { id?: string; user_id?: string; local_record_id?: string; local_record_type?: string; google_calendar_id?: string | null; google_event_id?: string; last_synced_at?: string; sync_status?: string; sync_direction?: string; created_at?: string; updated_at?: string };
+        Relationships: [];
+      };
+      monthly_plans: {
+        Row: { id: string; user_id: string; year: string | null; month: string; planned_study_hours: number; planned_tasks: number; planned_chapters: number; planned_mocks: number; planned_revisions: number; notes: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; year?: string | null; month: string; planned_study_hours?: number; planned_tasks?: number; planned_chapters?: number; planned_mocks?: number; planned_revisions?: number; notes?: string | null; created_at?: string; updated_at?: string };
+        Update: { id?: string; user_id?: string; year?: string | null; month?: string; planned_study_hours?: number; planned_tasks?: number; planned_chapters?: number; planned_mocks?: number; planned_revisions?: number; notes?: string | null; created_at?: string; updated_at?: string };
+        Relationships: [];
+      };
     };
     Views: {};
     Functions: {
