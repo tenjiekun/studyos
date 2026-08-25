@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/components/auth-provider";
+import { usePro } from "@/lib/payments/pro-context";
 import { getSupabase } from "@/lib/supabase/client";
-import { ArrowLeft, Flame, Loader2 } from "lucide-react";
+import { ArrowLeft, Flame, Loader2, Crown, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,7 @@ import {
 
 export default function CreateGroupPage() {
   const { user, isBypass } = useAuth();
+  const { isPro } = usePro();
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -241,15 +243,23 @@ export default function CreateGroupPage() {
                   variant={privacy === "private" ? "default" : "outline"}
                   size="sm"
                   className="flex-1"
-                  onClick={() => setPrivacy("private")}
+                  onClick={() => {
+                    if (!isPro) return;
+                    setPrivacy("private");
+                  }}
+                  disabled={!isPro}
                 >
+                  {!isPro && <Lock className="w-3 h-3 mr-1" />}
                   Private
+                  {!isPro && <Crown className="w-3 h-3 ml-1" />}
                 </Button>
               </div>
               <p className="text-[10px] text-muted-foreground">
                 {privacy === "public"
                   ? "Anyone can find and join this group"
-                  : "Only invited members can join"}
+                  : isPro
+                    ? "Only invited members can join"
+                    : "Upgrade to Pro to create private groups"}
               </p>
             </div>
           </CardContent>

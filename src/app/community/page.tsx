@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/components/auth-provider";
+import { usePro } from "@/lib/payments/pro-context";
 import {
   Users,
   Plus,
@@ -11,6 +12,7 @@ import {
   MessageCircle,
   User,
   Mail,
+  Crown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +27,7 @@ import { formatDistanceToNow } from "date-fns";
 
 export default function CommunityPage() {
   const { user, isBypass } = useAuth();
+  const { isPro, loading: proLoading } = usePro();
   const router = useRouter();
   const [groups, setGroups] = useState<GroupWithMembers[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,6 +82,18 @@ export default function CommunityPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/community/pro">
+            <Button
+              size="sm"
+              variant={isPro ? "default" : "outline"}
+              className={`gap-1.5 ${isPro ? "bg-gradient-to-r from-primary to-primary/80" : ""}`}
+            >
+              <Crown className="w-3.5 h-3.5" />
+              {!proLoading && (
+                <span className="text-xs">{isPro ? "Pro" : "Upgrade"}</span>
+              )}
+            </Button>
+          </Link>
           <Link href="/community/profile">
             <Button size="sm" variant="outline" className="gap-1.5 h-9 w-9 p-0">
               <User className="w-4 h-4" />

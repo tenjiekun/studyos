@@ -546,6 +546,24 @@ export interface Database {
         Update: { id?: string; user_id?: string; year_plan_id?: string | null; reason?: string | null; chapters_behind?: number; hours_behind?: number; changes_made?: any; created_at?: string };
         Relationships: [];
       };
+      payments: {
+        Row: { id: string; user_id: string; provider: string; provider_payment_id: string | null; provider_order_id: string | null; provider_event_id: string | null; amount: number; currency: string; payment_method: string | null; status: string; paid_at: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; provider?: string; provider_payment_id?: string | null; provider_order_id?: string | null; provider_event_id?: string | null; amount?: number; currency?: string; payment_method?: string | null; status?: string; paid_at?: string | null; created_at?: string; updated_at?: string };
+        Update: { id?: string; user_id?: string; provider?: string; provider_payment_id?: string | null; provider_order_id?: string | null; provider_event_id?: string | null; amount?: number; currency?: string; payment_method?: string | null; status?: string; paid_at?: string | null; created_at?: string; updated_at?: string };
+        Relationships: [];
+      };
+      user_entitlements: {
+        Row: { id: string; user_id: string; entitlement: string; starts_at: string; expires_at: string; status: string; source_payment_id: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; entitlement?: string; starts_at?: string; expires_at: string; status?: string; source_payment_id?: string | null; created_at?: string; updated_at?: string };
+        Update: { id?: string; user_id?: string; entitlement?: string; starts_at?: string; expires_at?: string; status?: string; source_payment_id?: string | null; created_at?: string; updated_at?: string };
+        Relationships: [];
+      };
+      admin_config: {
+        Row: { id: string; key: string; value: any; updated_at: string };
+        Insert: { id?: string; key: string; value: any; updated_at?: string };
+        Update: { id?: string; key?: string; value?: any; updated_at?: string };
+        Relationships: [];
+      };
     };
     Views: {};
     Functions: {
@@ -568,6 +586,14 @@ export interface Database {
       create_session: {
         Args: { p_task_id: string | null; p_subject: string | null; p_start_time: string; p_end_time: string | null; p_duration_minutes: number; p_session_type: string };
         Returns: any;
+      };
+      check_pro_status: {
+        Args: { p_user_id: string };
+        Returns: boolean;
+      };
+      expire_old_entitlements: {
+        Args: Record<string, never>;
+        Returns: void;
       };
     };
     Enums: {};

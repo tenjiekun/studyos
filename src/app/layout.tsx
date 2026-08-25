@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/components/auth-provider";
 import { AuthenticatedLayout } from "@/components/authenticated-layout";
+import { ProProvider } from "@/lib/payments/pro-context";
 import { Toaster } from "sonner";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 
@@ -55,11 +56,13 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <AuthProvider>
-            <TooltipProvider>
-              <AuthenticatedLayout>{children}</AuthenticatedLayout>
-            </TooltipProvider>
-            <Toaster richColors position="bottom-right" />
-            <ServiceWorkerRegister />
+            <ProProvider>
+              <TooltipProvider>
+                <AuthenticatedLayout>{children}</AuthenticatedLayout>
+              </TooltipProvider>
+                <Toaster richColors position="bottom-right" />
+              <ServiceWorkerRegister />
+            </ProProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>
