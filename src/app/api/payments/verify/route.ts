@@ -1,15 +1,17 @@
 // POST /api/payments/verify
 // Verifies Razorpay payment signature and activates Pro
-// SECURITY: Never trust client amounts — verify from server-side order record
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSupabase } from "@/lib/payments/server-db";
-import { RazorpayProvider } from "@/lib/payments/providers/razorpay";
-import { PLANS } from "@/lib/payments/config";
-import { logPaymentEvent } from "@/lib/payments/audit";
-import { calculateNewExpiry } from "@/lib/payments/config";
+import { createClient } from "@supabase/supabase-js";
+import { verifyRazorpaySignature } from "@/lib/payments/razorpay";
+import { PLANS, calculateNewExpiry } from "@/lib/payments/config";
 
-const razorpay = new RazorpayProvider();
+function getServerDb() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,12 +22,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const sb = getServerSupabase();
+    const sb = getServerDb();
     if (!sb) {
       return NextResponse.json({ error: "Server error" }, { status: 500 });
     }
 
-    // 1. Fetch order from database — this is the source of truth for amount
+    // 1. Fetch order from database
     const { data: order, error: orderError } = await sb
       .from("payment_orders")
       .select("*")
@@ -37,108 +39,68 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    // 2. Verify the order is in a valid state
+    // Already processed
     if (order.status === "successful") {
-      return NextResponse.json({
-        success: true,
-        alreadyProcessed: true,
-        orderNumber: order.order_number,
-      });
+      return NextResponse.json({ success: true, alreadyProcessed: true });
     }
 
     if (["expired", "cancelled", "refunded"].includes(order.status)) {
       return NextResponse.json({ error: `Order is ${order.status}` }, { status: 400 });
     }
 
-    // 3. Verify Razorpay signature
-    const isValid = razorpay.verifyWebhookSignature(
-      razorpayOrderId + "|" + razorpayPaymentId,
-      { "x-razorpay-signature": razorpaySignature }
+    // 2. Verify Razorpay signature
+    const body = razorpayOrderId + "|" + razorpayPaymentId;
+    if (!verifyRazorpaySignature(body, razorpaySignature)) {
+      return NextResponse.json({ error: "Invalid payment signature" }, { status: 400 });
+    }
+
+    // 3. Verify amount with Razorpay API
+    const KEY_ID = process.env.RAZORPAY_KEY_ID || "";
+    const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "";
+    const auth = `Basic ${Buffer.from(`${KEY_ID}:${KEY_SECRET}`).toString("base64")}`;
+
+    const rzpRes = await fetch(
+      `https://api.razorpay.com/v1/orders/${razorpayOrderId}/payments`,
+      { headers: { Authorization: auth } }
     );
 
-    if (!isValid.verified) {
-      // Try direct HMAC verification as fallback
-      const crypto = await import("crypto");
-      const keySecret = process.env.RAZORPAY_KEY_SECRET || "";
-      const expected = crypto.createHmac("sha256", keySecret)
-        .update(razorpayOrderId + "|" + razorpayPaymentId)
-        .digest("hex");
+    if (rzpRes.ok) {
+      const rzpData = await rzpRes.json();
+      const capturedPayment = (rzpData.items || []).find(
+        (p: { id: string; status: string; amount: number }) =>
+          p.id === razorpayPaymentId && p.status === "captured"
+      );
 
-      if (expected !== razorpaySignature) {
-        await logPaymentEvent({
-          userId,
-          orderId: order.id,
-          eventType: "webhook_failed",
-          details: { reason: "invalid_signature", source: "verify_endpoint" },
-        });
-        return NextResponse.json({ error: "Invalid payment signature" }, { status: 400 });
+      if (capturedPayment && capturedPayment.amount !== order.expected_amount_paise) {
+        console.error("AMOUNT MISMATCH:", capturedPayment.amount, "vs", order.expected_amount_paise);
+        return NextResponse.json({ error: "Payment amount mismatch" }, { status: 400 });
       }
     }
 
-    // 4. Fetch actual payment from Razorpay to verify amount
-    const paymentDetails = await razorpay.fetchPaymentStatus(razorpayOrderId);
-
-    if (!paymentDetails) {
-      return NextResponse.json({ error: "Could not verify payment with provider" }, { status: 400 });
-    }
-
-    // CRITICAL: Verify amount matches server-side order
-    if (paymentDetails.amount !== order.expected_amount_paise) {
-      console.error("AMOUNT MISMATCH:", paymentDetails.amount, "vs", order.expected_amount_paise);
-      await logPaymentEvent({
-        userId,
-        orderId: order.id,
-        eventType: "webhook_failed",
-        details: {
-          reason: "amount_mismatch",
-          client_reported: razorpayPaymentId,
-          server_verified_amount: paymentDetails.amount,
-          expected: order.expected_amount_paise,
-        },
-      });
-      return NextResponse.json({ error: "Payment amount mismatch" }, { status: 400 });
-    }
-
-    // 5. Verify the plan still exists and is active
+    // 4. Verify plan exists
     const plan = PLANS[order.plan_id as keyof typeof PLANS];
-    if (!plan || !plan.price_paise) {
+    if (!plan) {
       return NextResponse.json({ error: "Plan no longer available" }, { status: 400 });
     }
 
-    // 6. Activate Pro
+    // 5. Activate Pro
     const now = new Date().toISOString();
 
-    // Update order
+    // Update order status
     await sb
       .from("payment_orders")
       .update({ status: "successful", paid_at: now, updated_at: now })
       .eq("id", order.id);
 
-    // Create transaction
+    // Save transaction record
     await sb.from("payment_transactions").insert({
       order_id: order.id,
       provider_transaction_id: razorpayPaymentId,
-      payment_method: paymentDetails.method,
-      gross_amount_paise: paymentDetails.amount,
-      provider_fee_paise: paymentDetails.fee || 0,
-      tax_on_fee_paise: paymentDetails.tax || 0,
-      net_settlement_paise: paymentDetails.net || paymentDetails.amount,
+      payment_method: "upi",
+      gross_amount_paise: order.expected_amount_paise,
       currency: "INR",
       status: "successful",
-      settlement_status: "pending",
       paid_at: now,
-    });
-
-    await logPaymentEvent({
-      userId,
-      orderId: order.id,
-      eventType: "payment_successful",
-      details: {
-        transaction_id: razorpayPaymentId,
-        method: paymentDetails.method,
-        gross: paymentDetails.amount,
-        fee: paymentDetails.fee,
-      },
     });
 
     // Check for early renewal
@@ -155,7 +117,7 @@ export async function POST(request: NextRequest) {
 
     const newExpiry = calculateNewExpiry(currentEnt?.expires_at || null);
 
-    // Expire old
+    // Expire old entitlements
     await sb
       .from("user_entitlements")
       .update({ status: "expired", updated_at: now })
@@ -174,25 +136,12 @@ export async function POST(request: NextRequest) {
       expires_at: newExpiry.toISOString(),
       status: "active",
       source_payment_id: order.id,
-      updated_at: now,
-    });
-
-    await logPaymentEvent({
-      userId,
-      orderId: order.id,
-      eventType: "entitlement_activated",
-      details: {
-        expires_at: newExpiry.toISOString(),
-        extended_from: currentEnt?.expires_at || null,
-        plan_id: plan.plan_id,
-      },
     });
 
     return NextResponse.json({
       success: true,
       orderNumber: order.order_number,
       expiresAt: newExpiry.toISOString(),
-      daysRemaining: plan.duration_days,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Verification failed";

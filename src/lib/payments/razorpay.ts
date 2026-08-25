@@ -1,45 +1,35 @@
-// Razorpay payment integration for Community Pro
-// This file contains server-side Razorpay SDK helpers
+// Simplified Razorpay helper — direct API calls
 
 import crypto from "crypto";
 
-const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || "";
-const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "";
-const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || "";
+const KEY_ID = process.env.RAZORPAY_KEY_ID || "";
+const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "";
 
-export const PRO_PLAN = {
-  price_paise: 4900,
-  currency: "INR",
-  duration_days: 30,
-  entitlement: "community_pro",
-} as const;
+function authHeaders() {
+  return {
+    Authorization: `Basic ${Buffer.from(`${KEY_ID}:${KEY_SECRET}`).toString("base64")}`,
+    "Content-Type": "application/json",
+  };
+}
 
-// ===== Server-side Razorpay helpers =====
-
-/**
- * Create a Razorpay order for ₹49 Community Pro purchase
- */
-export async function createRazorpayOrder(userId: string) {
-  if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
-    throw new Error("Razorpay credentials not configured");
+export async function createRazorpayOrder(params: {
+  amount: number;
+  currency: string;
+  receipt: string;
+  notes?: Record<string, string>;
+}) {
+  if (!KEY_ID || !KEY_SECRET) {
+    throw new Error("Razorpay credentials not configured. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to .env.local");
   }
-
-  const receipt = `pro_${userId.slice(0, 8)}_${Date.now()}`;
 
   const response = await fetch("https://api.razorpay.com/v1/orders", {
     method: "POST",
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`).toString("base64")}`,
-      "Content-Type": "application/json",
-    },
+    headers: authHeaders(),
     body: JSON.stringify({
-      amount: PRO_PLAN.price_paise,
-      currency: PRO_PLAN.currency,
-      receipt,
-      notes: {
-        user_id: userId,
-        plan: "community_pro",
-      },
+      amount: params.amount,
+      currency: params.currency,
+      receipt: params.receipt,
+      notes: params.notes || {},
     }),
   });
 
@@ -51,62 +41,47 @@ export async function createRazorpayOrder(userId: string) {
   return response.json();
 }
 
-/**
- * Verify Razorpay payment signature after checkout
- */
-export function verifyRazorpaySignature(
-  orderId: string,
-  paymentId: string,
-  signature: string
-): boolean {
-  if (!RAZORPAY_KEY_SECRET) return false;
+export async function fetchRazorpayPayments(orderId: string) {
+  if (!KEY_ID || !KEY_SECRET) return [];
 
-  const body = orderId + "|" + paymentId;
-  const expectedSignature = crypto
-    .createHmac("sha256", RAZORPAY_KEY_SECRET)
+  const response = await fetch(
+    `https://api.razorpay.com/v1/orders/${orderId}/payments`,
+    { headers: authHeaders() }
+  );
+
+  if (!response.ok) return [];
+  const data = await response.json();
+  return data.items || [];
+}
+
+export function verifyRazorpaySignature(
+  body: string,
+  signature: string | null
+): boolean {
+  const secret = process.env.RAZORPAY_KEY_SECRET || "";
+  if (!secret || !signature) return false;
+
+  const expected = crypto
+    .createHmac("sha256", secret)
     .update(body)
     .digest("hex");
 
-  return expectedSignature === signature;
+  return expected === signature;
 }
 
-/**
- * Verify Razorpay webhook signature
- */
 export function verifyWebhookSignature(
   body: string,
   signature: string | null
 ): boolean {
-  if (!RAZORPAY_WEBHOOK_SECRET || !signature) return false;
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET || "";
+  if (!secret || !signature) return false;
 
-  const expectedSignature = crypto
-    .createHmac("sha256", RAZORPAY_WEBHOOK_SECRET)
+  const expected = crypto
+    .createHmac("sha256", secret)
     .update(body)
     .digest("hex");
 
-  return expectedSignature === signature;
+  return expected === signature;
 }
 
-/**
- * Fetch payment details from Razorpay
- */
-export async function fetchRazorpayPayment(paymentId: string) {
-  if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
-    throw new Error("Razorpay credentials not configured");
-  }
-
-  const response = await fetch(
-    `https://api.razorpay.com/v1/payments/${paymentId}`,
-    {
-      headers: {
-        Authorization: `Basic ${Buffer.from(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`).toString("base64")}`,
-      },
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch payment details");
-  }
-
-  return response.json();
-}
+export { KEY_ID };

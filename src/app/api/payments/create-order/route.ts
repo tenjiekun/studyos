@@ -1,13 +1,17 @@
 // POST /api/payments/create-order
-// Creates a new payment order server-side with amount protection
+// Creates Razorpay order — server-side amount protection
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSupabase } from "@/lib/payments/server-db";
-import { PLANS, type PlanId } from "@/lib/payments/config";
-import { RazorpayProvider } from "@/lib/payments/providers/razorpay";
-import { logPaymentEvent } from "@/lib/payments/audit";
+import { createClient } from "@supabase/supabase-js";
+import { createRazorpayOrder } from "@/lib/payments/razorpay";
+import { PLANS } from "@/lib/payments/config";
 
-const razorpay = new RazorpayProvider();
+function getServerDb() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,21 +22,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Server-side plan lookup — NEVER trust client amount
-    const plan = PLANS[planId as PlanId];
+    const plan = PLANS[planId as keyof typeof PLANS];
     if (!plan) {
       return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
-    if (!plan.price_paise || plan.price_paise <= 0) {
-      return NextResponse.json({ error: "Plan not available" }, { status: 400 });
-    }
 
-    const sb = getServerSupabase();
+    const sb = getServerDb();
     if (!sb) {
       return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
     }
-
-    // Expire any old pending orders for this user
-    await sb.rpc("expire_old_orders");
 
     // Generate internal order number
     const { count } = await sb
@@ -40,12 +38,11 @@ export async function POST(request: NextRequest) {
       .select("id", { count: "exact", head: true });
 
     const seq = (count || 0) + 1;
-    const now = new Date();
-    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, "");
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
     const orderNumber = `STUDYOS-${dateStr}-${String(seq).padStart(6, "0")}`;
 
-    // Create order record in database
-    const expiresAt = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
+    // Create order in database
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
     const { data: order, error: orderError } = await sb
       .from("payment_orders")
@@ -67,42 +64,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
     }
 
-    // Log audit event
-    await logPaymentEvent({
-      userId,
-      orderId: order.id,
-      eventType: "order_created",
-      details: { order_number: orderNumber, plan_id: plan.plan_id, amount: plan.price_paise },
-    });
-
     // Create Razorpay order
-    const providerOrder = await razorpay.createOrder({
-      userId,
-      plan,
-      internalOrderId: orderNumber,
+    const rzpOrder = await createRazorpayOrder({
+      amount: plan.price_paise,
+      currency: plan.currency,
+      receipt: orderNumber,
+      notes: { user_id: userId, plan_id: plan.plan_id },
     });
 
-    // Update order with provider order ID
+    // Update order with Razorpay order ID
     await sb
       .from("payment_orders")
-      .update({
-        provider_order_id: providerOrder.providerOrderId,
-        status: "pending",
-        updated_at: now.toISOString(),
-      })
+      .update({ provider_order_id: rzpOrder.id, updated_at: new Date().toISOString() })
       .eq("id", order.id);
-
-    await logPaymentEvent({
-      userId,
-      orderId: order.id,
-      eventType: "checkout_initiated",
-      details: { provider_order_id: providerOrder.providerOrderId },
-    });
 
     return NextResponse.json({
       orderId: order.id,
       orderNumber: order.order_number,
-      providerOrderId: providerOrder.providerOrderId,
+      providerOrderId: rzpOrder.id,
       amount: plan.price_paise,
       currency: plan.currency,
       keyId: process.env.RAZORPAY_KEY_ID,

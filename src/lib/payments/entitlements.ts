@@ -1,9 +1,6 @@
 // Entitlement checking utilities
 
 import { getSupabase } from "@/lib/supabase/client";
-import { PLANS } from "./config";
-
-const PRO_PLAN = PLANS.community_pro;
 
 export interface ProStatus {
   isPro: boolean;
@@ -19,14 +16,11 @@ export async function checkProStatus(userId: string): Promise<ProStatus> {
   const sb = getSupabase();
   if (!sb) return { isPro: false, expiresAt: null, daysRemaining: 0, entitlement: null };
 
-  // Expire any old entitlements
-  await sb.rpc("expire_old_entitlements");
-
   const { data } = await sb
     .from("user_entitlements")
     .select("entitlement, expires_at, status")
     .eq("user_id", userId)
-    .eq("entitlement", PRO_PLAN.plan_id)
+    .eq("entitlement", "community_pro")
     .eq("status", "active")
     .gt("expires_at", new Date().toISOString())
     .order("expires_at", { ascending: false })
