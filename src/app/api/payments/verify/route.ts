@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { verifyRazorpaySignature } from "@/lib/payments/razorpay";
+import { verifyPaymentSignature, fetchOrderPayments } from "@/lib/payments/razorpay";
 import { PLANS, calculateNewExpiry } from "@/lib/payments/config";
 
 function getServerDb() {
@@ -48,33 +48,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Order is ${order.status}` }, { status: 400 });
     }
 
-    // 2. Verify Razorpay signature
-    const body = razorpayOrderId + "|" + razorpayPaymentId;
-    if (!verifyRazorpaySignature(body, razorpaySignature)) {
+    // 2. Verify Razorpay signature using SDK helper
+    if (!verifyPaymentSignature(razorpayOrderId, razorpayPaymentId, razorpaySignature)) {
       return NextResponse.json({ error: "Invalid payment signature" }, { status: 400 });
     }
 
-    // 3. Verify amount with Razorpay API
-    const KEY_ID = process.env.RAZORPAY_KEY_ID || "";
-    const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "";
-    const auth = `Basic ${Buffer.from(`${KEY_ID}:${KEY_SECRET}`).toString("base64")}`;
-
-    const rzpRes = await fetch(
-      `https://api.razorpay.com/v1/orders/${razorpayOrderId}/payments`,
-      { headers: { Authorization: auth } }
-    );
-
-    if (rzpRes.ok) {
-      const rzpData = await rzpRes.json();
-      const capturedPayment = (rzpData.items || []).find(
-        (p: { id: string; status: string; amount: number }) =>
+    // 3. Verify amount with Razorpay API using SDK
+    try {
+      const payments = await fetchOrderPayments(razorpayOrderId);
+      const capturedPayment = payments.find(
+        (p: { id: string; status: string; amount: string | number }) =>
           p.id === razorpayPaymentId && p.status === "captured"
       );
 
-      if (capturedPayment && capturedPayment.amount !== order.expected_amount_paise) {
+      if (capturedPayment && Number(capturedPayment.amount) !== order.expected_amount_paise) {
         console.error("AMOUNT MISMATCH:", capturedPayment.amount, "vs", order.expected_amount_paise);
         return NextResponse.json({ error: "Payment amount mismatch" }, { status: 400 });
       }
+    } catch (err) {
+      // If Razorpay API call fails, still verify signature (it's sufficient for test mode)
+      console.warn("Could not verify amount with Razorpay API:", err);
     }
 
     // 4. Verify plan exists

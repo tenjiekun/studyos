@@ -1,74 +1,86 @@
-// Simplified Razorpay helper — direct API calls
+// Razorpay SDK integration — official package
 
+import Razorpay from "razorpay";
 import crypto from "crypto";
 
 const KEY_ID = process.env.RAZORPAY_KEY_ID || "";
 const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "";
 
-function authHeaders() {
-  return {
-    Authorization: `Basic ${Buffer.from(`${KEY_ID}:${KEY_SECRET}`).toString("base64")}`,
-    "Content-Type": "application/json",
-  };
+// Lazily initialized Razorpay instance
+let razorpay: Razorpay | null = null;
+
+function getRazorpay(): Razorpay {
+  if (!razorpay) {
+    if (!KEY_ID || !KEY_SECRET) {
+      throw new Error("Razorpay credentials not configured. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to .env.local");
+    }
+    razorpay = new Razorpay({ key_id: KEY_ID, key_secret: KEY_SECRET });
+  }
+  return razorpay;
 }
 
+/**
+ * Create a Razorpay order
+ */
 export async function createRazorpayOrder(params: {
   amount: number;
   currency: string;
   receipt: string;
   notes?: Record<string, string>;
 }) {
-  if (!KEY_ID || !KEY_SECRET) {
-    throw new Error("Razorpay credentials not configured. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to .env.local");
-  }
+  const instance = getRazorpay();
 
-  const response = await fetch("https://api.razorpay.com/v1/orders", {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify({
-      amount: params.amount,
-      currency: params.currency,
-      receipt: params.receipt,
-      notes: params.notes || {},
-    }),
+  const order = await instance.orders.create({
+    amount: params.amount, // in paise
+    currency: params.currency,
+    receipt: params.receipt,
+    notes: params.notes || {},
   });
 
-  if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.error?.description || "Failed to create Razorpay order");
-  }
-
-  return response.json();
+  return order;
 }
 
-export async function fetchRazorpayPayments(orderId: string) {
-  if (!KEY_ID || !KEY_SECRET) return [];
-
-  const response = await fetch(
-    `https://api.razorpay.com/v1/orders/${orderId}/payments`,
-    { headers: authHeaders() }
-  );
-
-  if (!response.ok) return [];
-  const data = await response.json();
-  return data.items || [];
+/**
+ * Fetch payments for a Razorpay order
+ */
+export async function fetchOrderPayments(orderId: string) {
+  const instance = getRazorpay();
+  const result = await instance.orders.fetchPayments(orderId);
+  return result.items || [];
 }
 
-export function verifyRazorpaySignature(
-  body: string,
-  signature: string | null
+/**
+ * Fetch a specific Razorpay payment
+ */
+export async function fetchPayment(paymentId: string) {
+  const instance = getRazorpay();
+  const payment = await instance.payments.fetch(paymentId);
+  return payment;
+}
+
+/**
+ * Verify Razorpay payment signature
+ * HMAC-SHA256(order_id + "|" + payment_id, KEY_SECRET)
+ */
+export function verifyPaymentSignature(
+  orderId: string,
+  paymentId: string,
+  signature: string
 ): boolean {
-  const secret = process.env.RAZORPAY_KEY_SECRET || "";
-  if (!secret || !signature) return false;
+  if (!KEY_SECRET) return false;
 
+  const body = orderId + "|" + paymentId;
   const expected = crypto
-    .createHmac("sha256", secret)
+    .createHmac("sha256", KEY_SECRET)
     .update(body)
     .digest("hex");
 
   return expected === signature;
 }
 
+/**
+ * Verify Razorpay webhook signature
+ */
 export function verifyWebhookSignature(
   body: string,
   signature: string | null

@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     const rawBody = await request.text();
     const signature = request.headers.get("x-razorpay-signature");
 
-    // 1. Verify webhook signature
+    // 1. Verify webhook signature using SDK helper
     if (!verifyWebhookSignature(rawBody, signature)) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }

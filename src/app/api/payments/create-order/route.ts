@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
     }
 
-    // Create Razorpay order
+    // Create Razorpay order using SDK
     const rzpOrder = await createRazorpayOrder({
       amount: plan.price_paise,
       currency: plan.currency,
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       providerOrderId: rzpOrder.id,
       amount: plan.price_paise,
       currency: plan.currency,
-      keyId: process.env.RAZORPAY_KEY_ID,
+      keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID,
       expiresAt,
     });
   } catch (error: unknown) {
