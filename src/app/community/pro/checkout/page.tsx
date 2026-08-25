@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { usePro } from "@/lib/payments/pro-context";
-import { formatPrice } from "@/lib/payments/config";
-import { PLANS } from "@/lib/payments/config";
+import { formatPrice, PLANS } from "@/lib/payments/config";
+import { waitForRazorpaySDK } from "@/lib/payments/wait-for-sdk";
 const PRO_PLAN = PLANS.community_pro;
 import {
   ArrowLeft,
@@ -100,7 +100,9 @@ export default function CheckoutPage() {
         },
       };
 
-      if (typeof window !== "undefined" && window.Razorpay) {
+      // Wait for Razorpay SDK to load (handles async loading)
+      const sdkReady = await waitForRazorpaySDK();
+      if (sdkReady && typeof window !== "undefined" && window.Razorpay) {
         const rzp = new window.Razorpay(options);
         rzp.on("payment.failed", (response: unknown) => {
           const resp = response as { error?: { description?: string } };
@@ -110,7 +112,7 @@ export default function CheckoutPage() {
         });
         rzp.open();
       } else {
-        setError("Payment system not available. Please ensure Razorpay SDK is loaded.");
+        setError("Payment system not available. Please refresh the page and try again.");
         setLoading(false);
         setStep("info");
       }

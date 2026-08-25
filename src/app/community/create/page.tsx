@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth-provider";
 import { usePro } from "@/lib/payments/pro-context";
 import { getSupabase } from "@/lib/supabase/client";
 import { ArrowLeft, Flame, Loader2, Crown, Lock, Shield, Users, ShieldCheck } from "lucide-react";
+import { waitForRazorpaySDK } from "@/lib/payments/wait-for-sdk";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -81,7 +82,8 @@ function CreateGroupProLock() {
         modal: { ondismiss: () => setLoading(false) },
       };
 
-      if (typeof window !== "undefined" && window.Razorpay) {
+      const sdkReady = await waitForRazorpaySDK();
+      if (sdkReady && typeof window !== "undefined" && window.Razorpay) {
         const rzp = new window.Razorpay(options);
         rzp.on("payment.failed", (response: unknown) => {
           const resp = response as { error?: { description?: string } };
@@ -90,7 +92,7 @@ function CreateGroupProLock() {
         });
         rzp.open();
       } else {
-        setError("Payment system not available.");
+        setError("Payment system not available. Please refresh and try again.");
         setLoading(false);
       }
     } catch (err: unknown) {

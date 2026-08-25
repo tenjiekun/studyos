@@ -5,6 +5,7 @@ import { useAuth } from "@/components/auth-provider";
 import { usePro } from "@/lib/payments/pro-context";
 import { formatPrice } from "@/lib/payments/config";
 import { PLANS } from "@/lib/payments/config";
+import { waitForRazorpaySDK } from "@/lib/payments/wait-for-sdk";
 import { Crown, Check, X, Loader2, Shield, Zap, Users, Sparkles, Lock } from "lucide-react";
 
 const PRO_PLAN = PLANS.community_pro;
@@ -93,7 +94,8 @@ export function UpgradeModal({ open, onClose, onPaymentSuccess }: UpgradeModalPr
         },
       };
 
-      if (typeof window !== "undefined" && window.Razorpay) {
+      const sdkReady = await waitForRazorpaySDK();
+      if (sdkReady && typeof window !== "undefined" && window.Razorpay) {
         const rzp = new window.Razorpay(options);
         rzp.on("payment.failed", function (response: unknown) {
           const resp = response as { error?: { description?: string } };
@@ -102,7 +104,7 @@ export function UpgradeModal({ open, onClose, onPaymentSuccess }: UpgradeModalPr
         });
         rzp.open();
       } else {
-        setError("Razorpay SDK not loaded. Please add Razorpay script to your page.");
+        setError("Payment system not available. Please refresh and try again.");
         setLoading(false);
       }
     } catch (err: unknown) {

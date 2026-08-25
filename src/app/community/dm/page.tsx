@@ -19,6 +19,7 @@ import {
   Crown,
   Shield,
 } from "lucide-react";
+import { waitForRazorpaySDK } from "@/lib/payments/wait-for-sdk";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -90,7 +91,8 @@ function DMProLock() {
         modal: { ondismiss: () => setLoading(false) },
       };
 
-      if (typeof window !== "undefined" && window.Razorpay) {
+      const sdkReady = await waitForRazorpaySDK();
+      if (sdkReady && typeof window !== "undefined" && window.Razorpay) {
         const rzp = new window.Razorpay(options);
         rzp.on("payment.failed", (response: unknown) => {
           const resp = response as { error?: { description?: string } };
@@ -99,7 +101,7 @@ function DMProLock() {
         });
         rzp.open();
       } else {
-        setError("Payment system not available.");
+        setError("Payment system not available. Please refresh and try again.");
         setLoading(false);
       }
     } catch (err: unknown) {
