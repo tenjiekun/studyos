@@ -1,14 +1,21 @@
-/**
- * Wait for the Razorpay SDK to be available on window.
- * Retries every 200ms up to maxAttempts (default 50 = 10 seconds).
- */
-export function waitForRazorpaySDK(maxAttempts = 50): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (typeof window !== "undefined" && window.Razorpay) {
-      resolve(true);
-      return;
-    }
+import { loadRazorpaySDK } from "./load-razorpay-sdk";
 
+/**
+ * Ensure the Razorpay SDK is loaded and available on window.Razorpay.
+ * First tries to dynamically inject the script, then polls until ready.
+ */
+export async function waitForRazorpaySDK(maxAttempts = 50): Promise<boolean> {
+  // Already available
+  if (typeof window !== "undefined" && window.Razorpay) {
+    return true;
+  }
+
+  // Dynamically load the SDK
+  const loaded = await loadRazorpaySDK();
+  if (loaded) return true;
+
+  // Fallback: poll in case the script was loaded by another path
+  return new Promise((resolve) => {
     let attempts = 0;
     const interval = setInterval(() => {
       attempts++;
