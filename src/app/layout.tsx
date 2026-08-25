@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -63,6 +64,7 @@ export default function RootLayout({
                 <Toaster richColors position="bottom-right" />
               <ServiceWorkerRegister />
             </ProProvider>
+        <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
           </AuthProvider>
         </ThemeProvider>
       </body>

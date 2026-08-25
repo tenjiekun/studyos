@@ -162,7 +162,6 @@ export function UpgradeModal({ open, onClose, onPaymentSuccess }: UpgradeModalPr
           <p className="text-center text-[10px] text-muted-foreground mt-3">Secure payment powered by Razorpay · UPI · Cards · Netbanking</p>
         </div>
       </div>
-      <script src="https://checkout.razorpay.com/v1/checkout.js" async />
     </div>
   );
 }
