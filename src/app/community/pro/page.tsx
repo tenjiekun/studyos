@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { usePro } from "@/lib/payments/pro-context";
-import { formatPrice, formatExpiryDate } from "@/lib/payments/entitlements";
-import { PRO_PLAN } from "@/lib/payments/razorpay";
+import { formatPrice, formatExpiryDate } from "@/lib/payments/config";
+import { PLANS } from "@/lib/payments/config";
+const PRO_PLAN = PLANS.community_pro;
 import { getSupabase } from "@/lib/supabase/client";
 import {
   Crown,
@@ -70,7 +71,7 @@ export default function ProMembershipPage() {
       const res = await fetch("/api/payments/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({ userId: user.id, planId: "community_pro" }),
       });
 
       const data = await res.json();
@@ -82,7 +83,7 @@ export default function ProMembershipPage() {
         currency: data.currency,
         name: "StudyOS",
         description: "Community Pro Renewal — 30 Days",
-        order_id: data.orderId,
+        order_id: data.providerOrderId,
         handler: async function (response: {
           razorpay_order_id: string;
           razorpay_payment_id: string;
@@ -93,6 +94,7 @@ export default function ProMembershipPage() {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
+                orderId: data.orderId,
                 razorpayOrderId: response.razorpay_order_id,
                 razorpayPaymentId: response.razorpay_payment_id,
                 razorpaySignature: response.razorpay_signature,

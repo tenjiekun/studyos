@@ -1,7 +1,9 @@
 // Entitlement checking utilities
 
 import { getSupabase } from "@/lib/supabase/client";
-import { PRO_PLAN } from "./razorpay";
+import { PLANS } from "./config";
+
+const PRO_PLAN = PLANS.community_pro;
 
 export interface ProStatus {
   isPro: boolean;
@@ -17,14 +19,14 @@ export async function checkProStatus(userId: string): Promise<ProStatus> {
   const sb = getSupabase();
   if (!sb) return { isPro: false, expiresAt: null, daysRemaining: 0, entitlement: null };
 
-  // First, expire any old entitlements
+  // Expire any old entitlements
   await sb.rpc("expire_old_entitlements");
 
   const { data } = await sb
     .from("user_entitlements")
     .select("entitlement, expires_at, status")
     .eq("user_id", userId)
-    .eq("entitlement", PRO_PLAN.entitlement)
+    .eq("entitlement", PRO_PLAN.plan_id)
     .eq("status", "active")
     .gt("expires_at", new Date().toISOString())
     .order("expires_at", { ascending: false })
@@ -48,35 +50,4 @@ export async function checkProStatus(userId: string): Promise<ProStatus> {
     daysRemaining,
     entitlement: data.entitlement,
   };
-}
-
-/**
- * Calculate new expiry date (extend from current expiry or from now)
- */
-export function calculateNewExpiry(currentExpiry: string | null): Date {
-  const base = currentExpiry && new Date(currentExpiry) > new Date()
-    ? new Date(currentExpiry)
-    : new Date();
-
-  const newExpiry = new Date(base);
-  newExpiry.setDate(newExpiry.getDate() + PRO_PLAN.duration_days);
-  return newExpiry;
-}
-
-/**
- * Format currency for display
- */
-export function formatPrice(paise: number): string {
-  return `₹${(paise / 100).toFixed(0)}`;
-}
-
-/**
- * Format expiry date
- */
-export function formatExpiryDate(isoDate: string): string {
-  return new Date(isoDate).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
 }

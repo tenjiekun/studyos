@@ -3,18 +3,11 @@
 import { useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { usePro } from "@/lib/payments/pro-context";
-import { formatPrice } from "@/lib/payments/entitlements";
-import { PRO_PLAN } from "@/lib/payments/razorpay";
-import {
-  Crown,
-  Check,
-  X,
-  Loader2,
-  Shield,
-  Zap,
-  Users,
-  Sparkles,
-} from "lucide-react";
+import { formatPrice } from "@/lib/payments/config";
+import { PLANS } from "@/lib/payments/config";
+import { Crown, Check, X, Loader2, Shield, Zap, Users, Sparkles, Lock } from "lucide-react";
+
+const PRO_PLAN = PLANS.community_pro;
 
 const PRO_FEATURES = [
   { icon: Users, text: "Create private study groups" },
@@ -42,35 +35,33 @@ export function UpgradeModal({ open, onClose, onPaymentSuccess }: UpgradeModalPr
     setError(null);
 
     try {
-      // 1. Create order
       const res = await fetch("/api/payments/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({ userId: user.id, planId: "community_pro" }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create order");
 
-      // 2. Open Razorpay checkout
       const options = {
         key: data.keyId,
         amount: data.amount,
         currency: data.currency,
         name: "StudyOS",
         description: "Community Pro — 30 Days",
-        order_id: data.orderId,
+        order_id: data.providerOrderId,
         handler: async function (response: {
           razorpay_order_id: string;
           razorpay_payment_id: string;
           razorpay_signature: string;
         }) {
-          // 3. Verify payment
           try {
             const verifyRes = await fetch("/api/payments/verify", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
+                orderId: data.orderId,
                 razorpayOrderId: response.razorpay_order_id,
                 razorpayPaymentId: response.razorpay_payment_id,
                 razorpaySignature: response.razorpay_signature,
@@ -81,7 +72,6 @@ export function UpgradeModal({ open, onClose, onPaymentSuccess }: UpgradeModalPr
             const verifyData = await verifyRes.json();
             if (!verifyRes.ok) throw new Error(verifyData.error || "Payment verification failed");
 
-            // 4. Refresh Pro status (realtime should also update)
             await refresh();
             onPaymentSuccess?.();
             onClose();
@@ -126,23 +116,12 @@ export function UpgradeModal({ open, onClose, onPaymentSuccess }: UpgradeModalPr
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-card border border-border rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-fade-in">
-        {/* Header gradient */}
         <div className="relative bg-gradient-to-br from-primary/20 via-primary/10 to-transparent p-6 pb-4">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
-          >
+          <button onClick={onClose} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors">
             <X className="w-5 h-5" />
           </button>
-
           <div className="flex items-center gap-3 mb-3">
             <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
               <Crown className="w-6 h-6 text-primary" />
@@ -152,18 +131,12 @@ export function UpgradeModal({ open, onClose, onPaymentSuccess }: UpgradeModalPr
               <p className="text-sm text-muted-foreground">Premium community features</p>
             </div>
           </div>
-
-          {/* Price */}
           <div className="flex items-baseline gap-1.5">
             <span className="text-3xl font-bold">{formatPrice(PRO_PLAN.price_paise)}</span>
             <span className="text-sm text-muted-foreground">/ {PRO_PLAN.duration_days} Days</span>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            One-time payment · No automatic renewal
-          </p>
+          <p className="text-xs text-muted-foreground mt-1">One-time payment · No automatic renewal</p>
         </div>
-
-        {/* Features */}
         <div className="px-6 py-4 space-y-3">
           {PRO_FEATURES.map((feat, i) => (
             <div key={i} className="flex items-center gap-3">
@@ -175,36 +148,21 @@ export function UpgradeModal({ open, onClose, onPaymentSuccess }: UpgradeModalPr
             </div>
           ))}
         </div>
-
-        {/* Error */}
         {error && (
-          <div className="mx-6 mb-3 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-            {error}
-          </div>
+          <div className="mx-6 mb-3 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>
         )}
-
-        {/* CTA */}
         <div className="px-6 pb-6">
           <button
             onClick={handlePayment}
             disabled={loading}
-            className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-semibold text-sm
-              hover:bg-primary/90 transition-all flex items-center justify-center gap-2
-              disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <>
-                Pay {formatPrice(PRO_PLAN.price_paise)} with UPI
-              </>
-            )}
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Lock className="w-4 h-4" /> Pay {formatPrice(PRO_PLAN.price_paise)} with UPI</>}
           </button>
-          <p className="text-center text-[10px] text-muted-foreground mt-3">
-            Secure payment powered by Razorpay · UPI · Cards · Netbanking
-          </p>
+          <p className="text-center text-[10px] text-muted-foreground mt-3">Secure payment powered by Razorpay · UPI · Cards · Netbanking</p>
         </div>
       </div>
+      <script src="https://checkout.razorpay.com/v1/checkout.js" async />
     </div>
   );
 }

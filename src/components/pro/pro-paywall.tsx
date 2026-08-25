@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { usePro } from "@/lib/payments/pro-context";
-import { formatPrice } from "@/lib/payments/entitlements";
-import { PRO_PLAN } from "@/lib/payments/razorpay";
+import { formatPrice } from "@/lib/payments/config";
+import { PLANS } from "@/lib/payments/config";
+const PRO_PLAN = PLANS.community_pro;
 import {
   Crown,
   Check,
@@ -76,7 +77,7 @@ export function ProPaywall({ showComparison = true }: ProPaywallProps) {
       const res = await fetch("/api/payments/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({ userId: user.id, planId: "community_pro" }),
       });
 
       const data = await res.json();
@@ -88,7 +89,7 @@ export function ProPaywall({ showComparison = true }: ProPaywallProps) {
         currency: data.currency,
         name: "StudyOS",
         description: "Community Pro — 30 Days",
-        order_id: data.orderId,
+        order_id: data.providerOrderId,
         handler: async function (response: {
           razorpay_order_id: string;
           razorpay_payment_id: string;
@@ -99,6 +100,7 @@ export function ProPaywall({ showComparison = true }: ProPaywallProps) {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
+                orderId: data.orderId,
                 razorpayOrderId: response.razorpay_order_id,
                 razorpayPaymentId: response.razorpay_payment_id,
                 razorpaySignature: response.razorpay_signature,

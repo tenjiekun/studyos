@@ -40,7 +40,7 @@ function CreateGroupProLock() {
       const res = await fetch("/api/payments/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({ userId: user.id, planId: "community_pro" }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create order");
@@ -51,7 +51,7 @@ function CreateGroupProLock() {
         currency: data.currency,
         name: "StudyOS",
         description: "Community Pro — 30 Days",
-        order_id: data.orderId,
+        order_id: data.providerOrderId,
         handler: async function (response: {
           razorpay_order_id: string;
           razorpay_payment_id: string;
@@ -62,6 +62,7 @@ function CreateGroupProLock() {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
+                orderId: data.orderId,
                 razorpayOrderId: response.razorpay_order_id,
                 razorpayPaymentId: response.razorpay_payment_id,
                 razorpaySignature: response.razorpay_signature,
