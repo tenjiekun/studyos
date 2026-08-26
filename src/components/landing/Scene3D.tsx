@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useEffect } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { CentralOrb } from "./core/CentralOrb";
@@ -16,38 +16,91 @@ interface Scene3DProps {
 
 export function Scene3D({ progress, currentScene, sceneData }: Scene3DProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const { camera } = useThree();
+  const { camera, gl } = useThree();
   const targetCamPos = useRef(new THREE.Vector3(0, 0, 5));
+
+  // Mouse tracking — normalized -1 to 1
+  const mouse = useRef({ x: 0, y: 0 });
+  const smoothMouse = useRef({ x: 0, y: 0 });
+
+  // Listen to pointermove on the canvas
+  useEffect(() => {
+    const dom = gl.domElement;
+    const handleMove = (e: PointerEvent) => {
+      mouse.current.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.current.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    };
+    dom.addEventListener("pointermove", handleMove, { passive: true });
+    return () => dom.removeEventListener("pointermove", handleMove);
+  }, [gl.domElement]);
 
   // Camera positions for each scene — cinematic movement
   const cameraKeyframes = useMemo(() => [
-    new THREE.Vector3(0, 0.3, 6),       // hero — slightly elevated
-    new THREE.Vector3(0, 0.8, 5.5),     // year — looking down at months
+    new THREE.Vector3(0, 0.3, 6),       // hero
+    new THREE.Vector3(0, 0.8, 5.5),     // year
     new THREE.Vector3(1, 0.2, 5),       // syllabus
     new THREE.Vector3(-0.5, 0, 5.5),    // planner
-    new THREE.Vector3(0, 0.5, 4.5),     // focus — closer
+    new THREE.Vector3(0, 0.5, 4.5),     // focus
     new THREE.Vector3(0.5, 0.3, 5),     // progress
     new THREE.Vector3(0, 0.1, 5.5),     // tests
     new THREE.Vector3(-0.3, -0.2, 4.5), // time
     new THREE.Vector3(0.2, 0.4, 5),     // community
     new THREE.Vector3(0, 0.2, 4.8),     // pro
     new THREE.Vector3(-0.2, 0, 5.5),    // calendar
-    new THREE.Vector3(0, 0.3, 7),       // final — pulled back
+    new THREE.Vector3(0, 0.3, 7),       // final
   ], []);
 
   useFrame((state, delta) => {
     const idx = Math.min(currentScene, cameraKeyframes.length - 1);
     targetCamPos.current.copy(cameraKeyframes[idx]);
 
-    // Smooth camera interpolation
-    camera.position.lerp(targetCamPos.current, 1 - Math.pow(0.0005, delta));
-    camera.lookAt(0, 0, 0);
+    // Smooth mouse interpolation (lerp toward raw mouse)
+    const lerpFactor = 1 - Math.pow(0.02, delta);
+    smoothMouse.current.x = THREE.MathUtils.lerp(smoothMouse.current.x, mouse.current.x, lerpFactor);
+    smoothMouse.current.y = THREE.MathUtils.lerp(smoothMouse.current.y, mouse.current.y, lerpFactor);
 
-    // Subtle group rotation with scroll
+    const mx = smoothMouse.current.x;
+    const my = smoothMouse.current.y;
+
+    // Apply mouse offset to camera lookAt target — subtle parallax
+    const lookAtTarget = new THREE.Vector3(
+      mx * 0.4,  // horizontal shift
+      my * 0.25, // vertical shift
+      0
+    );
+
+    // Smooth camera interpolation with parallax lookAt
+    camera.position.lerp(targetCamPos.current, 1 - Math.pow(0.0005, delta));
+    camera.lookAt(lookAtTarget);
+
+    // Subtle group rotation — adds to the parallax feel
     if (groupRef.current) {
+      // Scroll-driven rotation
+      const scrollRot = progress * Math.PI * 0.3;
+      // Mouse-driven rotation (smaller range)
+      const mouseRotY = mx * 0.08;
+      const mouseRotX = my * 0.04;
+
       groupRef.current.rotation.y = THREE.MathUtils.lerp(
         groupRef.current.rotation.y,
-        progress * Math.PI * 0.3,
+        scrollRot + mouseRotY,
+        delta * 2
+      );
+      groupRef.current.rotation.x = THREE.MathUtils.lerp(
+        groupRef.current.rotation.x,
+        mouseRotX,
+        delta * 2
+      );
+
+      // Subtle position shift for depth
+      groupRef.current.position.x = THREE.MathUtils.lerp(
+        groupRef.current.position.x,
+        mx * 0.15,
+        delta * 1.5
+      );
+      groupRef.current.position.y = THREE.MathUtils.lerp(
+        groupRef.current.position.y,
+        my * 0.1,
         delta * 1.5
       );
     }
@@ -58,10 +111,8 @@ export function Scene3D({ progress, currentScene, sceneData }: Scene3DProps) {
   return (
     <group ref={groupRef}>
       {/* === LIGHTING === */}
-      {/* Dim ambient for base visibility */}
       <ambientLight intensity={0.08} color="#1e1b4b" />
 
-      {/* Main directional — moonlight feel */}
       <directionalLight
         position={[3, 8, 5]}
         intensity={0.4}
@@ -69,7 +120,6 @@ export function Scene3D({ progress, currentScene, sceneData }: Scene3DProps) {
         castShadow={false}
       />
 
-      {/* Primary accent light — from above */}
       <pointLight
         position={[0, 4, 2]}
         intensity={1.2}
@@ -78,7 +128,6 @@ export function Scene3D({ progress, currentScene, sceneData }: Scene3DProps) {
         decay={2}
       />
 
-      {/* Rim light — behind the orb */}
       <pointLight
         position={[0, 1, -3]}
         intensity={0.8}
@@ -87,7 +136,6 @@ export function Scene3D({ progress, currentScene, sceneData }: Scene3DProps) {
         decay={2}
       />
 
-      {/* Side fill light */}
       <pointLight
         position={[-4, -1, 2]}
         intensity={0.3}
@@ -96,7 +144,6 @@ export function Scene3D({ progress, currentScene, sceneData }: Scene3DProps) {
         decay={2}
       />
 
-      {/* Bottom up-light for terrain */}
       <pointLight
         position={[0, -4, 0]}
         intensity={0.2}
@@ -130,7 +177,7 @@ export function Scene3D({ progress, currentScene, sceneData }: Scene3DProps) {
         progress={progress}
       />
 
-      {/* === FOG for depth === */}
+      {/* === FOG === */}
       <fog attach="fog" args={["#050510", 8, 25]} />
     </group>
   );
