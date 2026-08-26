@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 import { useNotifications } from "@/hooks/use-notifications";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/focus", label: "Focus", icon: Timer },
   { href: "/progress", label: "Progress", icon: BarChart3 },
@@ -76,8 +76,8 @@ export function Sidebar() {
         <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
           {navItems.map((item) => {
             const isActive =
-              item.href === "/"
-                ? pathname === "/"
+              item.href === "/dashboard"
+                ? pathname === "/dashboard" || pathname === "/"
                 : pathname.startsWith(item.href);
             return (
               <Link
@@ -182,8 +182,8 @@ export function Sidebar() {
             { href: "/planner", label: "Planner", icon: CalendarRange },
           ].map((item) => {
             const isActive =
-              item.href === "/"
-                ? pathname === "/"
+              item.href === "/dashboard"
+                ? pathname === "/dashboard" || pathname === "/"
                 : item.href === "/planner"
                 ? pathname.startsWith("/planner")
                 : pathname.startsWith(item.href);
