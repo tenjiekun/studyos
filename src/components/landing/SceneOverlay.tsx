@@ -1,10 +1,10 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import Link from "next/link";
 
 interface SceneOverlayProps {
   currentScene: number;
+  onEnterApp?: () => void;
   sceneData: Array<{
     id: string;
     title: string;
@@ -38,7 +38,7 @@ function fadeUp(delay = 0) {
   };
 }
 
-function HeroScene({ data, user }: { data: NonNullable<SceneOverlayProps["sceneData"][number]>; user?: { id: string } | null }) {
+function HeroScene({ data, onEnterApp }: { data: NonNullable<SceneOverlayProps["sceneData"][number]>; onEnterApp?: () => void }) {
   return (
     <div className="flex items-center h-full px-6 md:px-16 lg:px-24">
       {/* Left side — text content */}
@@ -67,13 +67,13 @@ function HeroScene({ data, user }: { data: NonNullable<SceneOverlayProps["sceneD
           {...fadeUp(0.45)}
           className="flex items-center gap-4"
         >
-          <Link
-            href={user ? "/dashboard" : "/login"}
+          <button
+            onClick={onEnterApp}
             className="px-7 py-3 bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-medium rounded-xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(99,102,241,0.4)] flex items-center gap-2"
           >
             Enter StudyOS
             <span className="text-lg">→</span>
-          </Link>
+          </button>
           <button
             onClick={() => window.scrollTo({ top: window.innerHeight * 1.2, behavior: "smooth" })}
             className="px-6 py-3 text-white/50 hover:text-white/80 text-sm flex items-center gap-2 transition-colors duration-300"
@@ -493,7 +493,7 @@ function CalendarScene({ data }: { data: NonNullable<SceneOverlayProps["sceneDat
   );
 }
 
-function FinalScene({ data, user }: { data: NonNullable<SceneOverlayProps["sceneData"][number]>; user?: { id: string } | null }) {
+function FinalScene({ data, onEnterApp }: { data: NonNullable<SceneOverlayProps["sceneData"][number]>; onEnterApp?: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center px-6">
       <motion.h1
@@ -516,13 +516,13 @@ function FinalScene({ data, user }: { data: NonNullable<SceneOverlayProps["scene
         Plan it. Focus on it. Finish it.
       </motion.p>
       <motion.div {...fadeUp(0.35)} className="flex flex-col sm:flex-row gap-4">
-        <Link
-          href={user ? "/dashboard" : "/login"}
+        <button
+          onClick={onEnterApp}
           className="px-8 py-3 bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-medium rounded-xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(99,102,241,0.3)] flex items-center gap-2"
         >
           Enter StudyOS
           <span>→</span>
-        </Link>
+        </button>
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           className="px-8 py-3 bg-white/[0.05] hover:bg-white/[0.1] text-white/50 text-sm rounded-xl border border-white/10 transition-all duration-300 flex items-center gap-2"
@@ -535,8 +535,8 @@ function FinalScene({ data, user }: { data: NonNullable<SceneOverlayProps["scene
   );
 }
 
-const SCENE_COMPONENTS: Record<string, React.FC<{ data: SceneOverlayProps["sceneData"][number]; user?: { id: string } | null | undefined }>> = {
-  hero: HeroScene as React.FC<{ data: SceneOverlayProps["sceneData"][number]; user?: { id: string } | null | undefined }>,
+const SCENE_COMPONENTS: Record<string, React.FC<{ data: SceneOverlayProps["sceneData"][number]; onEnterApp?: () => void; user?: { id: string } | null | undefined }>> = {
+  hero: HeroScene as React.FC<{ data: SceneOverlayProps["sceneData"][number]; onEnterApp?: () => void; user?: { id: string } | null | undefined }>,
   year: YearScene,
   syllabus: SyllabusScene,
   planner: PlannerScene,
@@ -547,10 +547,10 @@ const SCENE_COMPONENTS: Record<string, React.FC<{ data: SceneOverlayProps["scene
   community: CommunityScene,
   pro: ProScene,
   calendar: CalendarScene,
-  final: FinalScene as React.FC<{ data: SceneOverlayProps["sceneData"][number]; user?: { id: string } | null | undefined }>,
+  final: FinalScene as React.FC<{ data: SceneOverlayProps["sceneData"][number]; onEnterApp?: () => void; user?: { id: string } | null | undefined }>,
 };
 
-export function SceneOverlay({ currentScene, sceneData, progress, user }: SceneOverlayProps) {
+export function SceneOverlay({ currentScene, sceneData, progress, user, onEnterApp }: SceneOverlayProps) {
   const data = sceneData[currentScene];
   if (!data) return null;
 
@@ -569,7 +569,7 @@ export function SceneOverlay({ currentScene, sceneData, progress, user }: SceneO
             className="h-screen w-full"
           >
             {SceneComponent ? (
-              <SceneComponent data={data} user={user} />
+              <SceneComponent data={data} user={user} onEnterApp={onEnterApp} />
             ) : (
               <div className="flex items-center h-full px-6 md:px-16 lg:px-24">
                 <div className="z-10">

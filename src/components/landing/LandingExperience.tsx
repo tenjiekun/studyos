@@ -10,6 +10,7 @@ import { LoadingScreen } from "./LoadingScreen";
 import { Navigation } from "./Navigation";
 import { Scene3D } from "./Scene3D";
 import { SceneOverlay } from "./SceneOverlay";
+import { PageTransition } from "./PageTransition";
 import { useAuth } from "@/components/auth-provider";
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
@@ -128,9 +129,23 @@ export default function LandingExperience() {
   const [loaded, setLoaded] = useState(false);
   const [loadProgress, setLoadProgress] = useState(0);
   const [currentScene, setCurrentScene] = useState(0);
+  const [transitioning, setTransitioning] = useState(false);
+  const [navigateTo, setNavigateTo] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
+
+  const handleEnterApp = useCallback(() => {
+    const target = user ? "/dashboard" : "/login";
+    setTransitioning(true);
+    setNavigateTo(target);
+  }, [user]);
+
+  const handleTransitionComplete = useCallback(() => {
+    if (navigateTo) {
+      window.location.href = navigateTo;
+    }
+  }, [navigateTo]);
 
   // Simulate asset loading with progress, then reveal the scene
   useEffect(() => {
@@ -210,13 +225,7 @@ export default function LandingExperience() {
           {loaded && (
             <>
               <Navigation
-                onEnterApp={() => {
-                  if (user) {
-                    window.location.href = "/dashboard";
-                  } else {
-                    window.location.href = "/login";
-                  }
-                }}
+                onEnterApp={handleEnterApp}
                 currentScene={currentScene}
                 totalScenes={SCENE_DATA.length}
               />
@@ -225,11 +234,17 @@ export default function LandingExperience() {
                 sceneData={SCENE_DATA}
                 progress={currentScene / SCENE_DATA.length}
                 user={user}
+                onEnterApp={handleEnterApp}
               />
             </>
           )}
         </div>
       </div>
+      {/* Cinematic transition overlay */}
+      <PageTransition
+        active={transitioning}
+        onComplete={handleTransitionComplete}
+      />
     </div>
   );
 }
