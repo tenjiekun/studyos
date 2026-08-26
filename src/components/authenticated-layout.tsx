@@ -8,7 +8,7 @@ import { UsernameOnboarding } from "@/components/username-onboarding";
 import { NotificationBell } from "@/components/notification-bell";
 import { Flame } from "lucide-react";
 
-const PUBLIC_ROUTES = ["/login", "/", "/dashboard"];
+const PUBLIC_ROUTES = ["/login", "/"];
 
 export function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, isConfigured } = useAuth();
