@@ -1,31 +1,26 @@
-import { loadRazorpaySDK } from "./load-razorpay-sdk";
-
 /**
- * Ensure the Razorpay SDK is loaded and available on window.Razorpay.
- * First tries to dynamically inject the script, then polls until ready.
+ * Wait for the Razorpay SDK to be available on window.Razorpay.
+ * The SDK is loaded by next/script beforeInteractive in layout.tsx.
+ * This function polls until it's ready.
  */
-export async function waitForRazorpaySDK(maxAttempts = 50): Promise<boolean> {
-  // Already available
-  if (typeof window !== "undefined" && window.Razorpay) {
-    return true;
-  }
+export async function waitForRazorpaySDK(maxAttempts = 50, intervalMs = 200): Promise<boolean> {
+  if (typeof window === "undefined") return false;
 
-  // Dynamically load the SDK
-  const loaded = await loadRazorpaySDK();
-  if (loaded) return true;
+  // Immediately available
+  if (window.Razorpay) return true;
 
-  // Fallback: poll in case the script was loaded by another path
   return new Promise((resolve) => {
     let attempts = 0;
-    const interval = setInterval(() => {
+    const check = setInterval(() => {
       attempts++;
-      if (typeof window !== "undefined" && window.Razorpay) {
-        clearInterval(interval);
+      if (window.Razorpay) {
+        clearInterval(check);
         resolve(true);
       } else if (attempts >= maxAttempts) {
-        clearInterval(interval);
+        clearInterval(check);
+        console.error("[StudyOS] Razorpay SDK failed to load after", maxAttempts * intervalMs, "ms");
         resolve(false);
       }
-    }, 200);
+    }, intervalMs);
   });
 }
