@@ -9,6 +9,7 @@ import { AuthenticatedLayout } from "@/components/authenticated-layout";
 import { ProProvider } from "@/lib/payments/pro-context";
 import { Toaster } from "sonner";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -59,18 +60,19 @@ export default function RootLayout({
           src="https://checkout.razorpay.com/v1/checkout.js"
           strategy="beforeInteractive"
         />
-        <ThemeProvider>
-          <AuthProvider>
-            <ProProvider>
-              <TooltipProvider>
-                <AuthenticatedLayout>{children}</AuthenticatedLayout>
-              </TooltipProvider>
-                <Toaster richColors position="bottom-right" />
-              <ServiceWorkerRegister />
-            </ProProvider>
-
-          </AuthProvider>
-        </ThemeProvider>
+        <ErrorBoundary>
+          <ThemeProvider>
+            <AuthProvider>
+              <ProProvider>
+                <TooltipProvider>
+                  <AuthenticatedLayout>{children}</AuthenticatedLayout>
+                </TooltipProvider>
+                  <Toaster richColors position="bottom-right" />
+                <ServiceWorkerRegister />
+              </ProProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

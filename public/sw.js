@@ -1,12 +1,11 @@
-// StudyOS Service Worker
-const CACHE_NAME = "studyos-v1";
+// StudyOS Service Worker — with automatic cache invalidation on new deploys
+const CACHE_NAME = "studyos-v2";
 const STATIC_ASSETS = [
   "/",
   "/manifest.json",
-  "/icons/icon.svg",
 ];
 
-// Install — cache shell
+// Install — cache shell and skip waiting immediately
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -16,62 +15,79 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-// Activate — clean old caches
+// Activate — clean ALL old caches aggressively
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+        keys
+          .filter((key) => key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
       );
     })
   );
   self.clients.claim();
 });
 
-// Fetch — network-first for API, cache-first for static
+// Listen for version check messages from the app
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
+// Fetch strategy — network-first for everything
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests
+  // Only handle GET requests
   if (request.method !== "GET") return;
 
-  // Skip Supabase API and realtime
+  // Skip Supabase API, realtime, and external services
   if (url.hostname.includes("supabase")) return;
+  if (url.hostname.includes("razorpay")) return;
+  if (url.hostname.includes("googleapis")) return;
 
-  // Skip Next.js internals
-  if (url.pathname.startsWith("/_next")) return;
-
-  // Cache-first for static assets
+  // For HTML pages — always go network first (never serve stale)
   if (
-    url.pathname.endsWith(".js") ||
-    url.pathname.endsWith(".css") ||
-    url.pathname.endsWith(".svg") ||
-    url.pathname.endsWith(".png") ||
-    url.pathname.endsWith(".woff2")
+    request.headers.get("accept")?.includes("text/html") ||
+    url.pathname === "/" ||
+    !url.pathname.includes(".")
   ) {
     event.respondWith(
-      caches.match(request).then((cached) => {
-        return cached || fetch(request).then((response) => {
+      fetch(request)
+        .then((response) => {
+          // Update cache with fresh version
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           return response;
-        });
-      })
+        })
+        .catch(() => {
+          // Only fall back to cache if network fails
+          return caches.match(request).then((cached) => {
+            return cached || new Response("Offline", { status: 503 });
+          });
+        })
     );
     return;
   }
 
-  // Network-first for pages
+  // For static assets (JS, CSS, fonts, images) — stale-while-revalidate
   event.respondWith(
-    fetch(request)
-      .then((response) => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-        return response;
-      })
-      .catch(() => {
-        return caches.match(request);
-      })
+    caches.match(request).then((cached) => {
+      const fetchPromise = fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => cached);
+
+      // Return cached version immediately, update in background
+      return cached || fetchPromise;
+    })
   );
 });
